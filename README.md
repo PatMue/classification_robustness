@@ -8,13 +8,10 @@ AROW Workshop ICCV2023 Code submission. Classification robustness to common opti
 If you find this useful in your research, please consider citing:
 
 @article{mueller2023_opticsbench,
-  author   = "Patrick Müller, Alexander Braun and Margret Keuper",
-  title    = "Classification robustness to common optical aberrations",
-  journal  = "Proceedings of the International Conference on Computer Vision Workshops (ICCVW)",
-  year     = 2023,
-  volume   = "",
-  number   = "",
-  pages    = ""
+  author   = {Patrick Müller, Alexander Braun and Margret Keuper},
+  title    = {Classification robustness to common optical aberrations},
+  journal  = {Proceedings of the International Conference on Computer Vision Workshops (ICCVW)},
+  year     = {2023}
 }
 
 ## Example usage
