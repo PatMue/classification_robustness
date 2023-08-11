@@ -14,7 +14,7 @@ If you find this useful in your research, please consider citing:
   year     = 2023,
   volume   = "",
   number   = "",
-  pages    = "",
+  pages    = ""
 }
 
 ## Example usage
