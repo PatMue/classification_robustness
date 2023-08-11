@@ -16,3 +16,7 @@ If you find this useful in your research, please consider citing:
   number   = "",
   pages    = "",
 }
+
+## Example usage
+
+% to be done 
