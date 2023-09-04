@@ -2,6 +2,21 @@
 # (c) Patrick Müller 2023 
 #################################
 
+
+"""
+If you find this useful in your research, please cite:
+
+@article{mueller2023_opticsbench,
+	author   = {Patrick Müller, Alexander Braun and Margret Keuper},
+	title    = {Classification robustness to common optical aberrations},
+	journal  = {Proceedings of the International Conference on Computer Vision Workshops (ICCVW)},
+	year     = {2023}
+}
+
+"""
+__license__ = "MIT-license"
+__author__ = "Patrick Müller"
+
 import os
 import shutil
 import sys
