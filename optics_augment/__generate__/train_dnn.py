@@ -1,14 +1,28 @@
+"""
+
+#################################
+    (c) Patrick Müller 2023 
+#################################
+
+If you find this useful in your research, please cite:
+
+@article{mueller2023_opticsbench,
+	author   = {Patrick Müller, Alexander Braun and Margret Keuper},
+	title    = {Classification robustness to common optical aberrations},
+	journal  = {Proceedings of the International Conference on Computer Vision Workshops (ICCVW)},
+	year     = {2023}
+}
+
+"""
+
+__author__ = "Patrick Müller (2023)"
+
+
 # -*- coding: utf-8 -*-
-# Oktober 2022, 09.12.2022 (update) -- train_dnn.py, (c) Patrick Müller 2022-2023
 # based on:
 #retrain_dnn.ipynb
 # Retrain a DNN from pytorch
-#https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
-
-## install packages and imports
-#!pip install torch==1.10.
-#!pip install torchvision==0.11.1
-#!pip install pynvml
+# based on: https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 
 import os
 import copy
