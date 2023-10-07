@@ -29,6 +29,36 @@ If you find this useful in your research, please consider citing:
 }
 ```
 
+## Leaderboard (OpticsBench ImageNet-100)
+
+Accuracies w/wo OpticsAugment evaluated on ImageNet-100 OpticsBench. Average over all corruptions. 
+
+Model | 1 | 2 | 3 | 4 | 5
+--- | --- | --- | --- |--- |--- 
+DenseNet __(ours)__ | __68.22__ | __65.33__ | __56.33__ | __41.60__ | __30.13__
+DenseNet | 53.45 | 43.37 | 29.07 | 20.62 | 16.30
+EfficientNet __(ours)__ | __61.00__ | __55.34__ | __42.14__ | __30.27__ | __23.35__ 
+EfficientNet | 52.55 | 42.74 | 29.24 | 20.84 | 16.00
+MobileNet __(ours)__ | __57.59__ | __52.30__ | __38.58__ | __27.51__ | __20.54__ 
+MobileNet | 49.47 | 39.57 | 24.78 | 17.42 | 13.27
+ResNet101 __(ours)__ | __69.90__ | __67.68__ | __61.36__ | __49.04__ | __37.80__ 
+ResNet101 | 59.92 | 51.44 | 40.21 | 31.65 | 25.73
+ResNeXt50 __(ours)__ | __65.14__ | __62.68__ | __54.44__ | __39.90__ | __28.45__ 
+ResNeXt50 | 47.74 | 38.19 | 24.88 | 17.58 | 13.69
+
+We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench ImageNet-1k or ImageNet-100. If you want to be included in the leaderboard, feel free to contact patrick.mueller@student.uni-siegen.de.
+
+### Common corruptions
+Performance *gain* with OpticsAugment on all 2D common corruptions as average difference in accuracy across all corruptions in %-points for each severity.
+
+DNN | 1 | 2 | 3 | 4 | 5 
+--- | --- | --- | --- |--- |--- 
+ DenseNet161  | 5.08 |  7.55 | 8.73  | 7.30 | 5.38 
+ ResNeXt50 | 5.11 |  7.63 |  8.68 | 7.18 |  5.27
+ ResNet101 | 1.25 | 3.07 | 4.55 | 4.90 | 4.10
+ MobileNet | 3.58 | 4.92 | 4.78 | 3.69 | 3.07 
+ EfficientNet  | 4.35 | 6.32 | 6.70 | 4.62 | 3.69
+
 ## Example usage (OpticsAugment)
 Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/__generate__/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
 ```
