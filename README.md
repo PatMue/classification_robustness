@@ -1,8 +1,7 @@
 # Classification robustness to common optical aberrations
 (c) Patrick Müller 2023, licensed under MIT-license
 
-AROW Workshop ICCV2023 Code submission. Classification robustness to common optical aberrations.
-
+AROW Workshop ICCV2023 Code submission. Classification robustness to common optical aberrations. (https://openaccess.thecvf.com/content/ICCV2023W/AROW/html/Muller_Classification_Robustness_to_Common_Optical_Aberrations_ICCVW_2023_paper.html)
 
 ## Citation
 If you find this useful in your research, please consider citing:
