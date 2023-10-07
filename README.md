@@ -29,7 +29,16 @@ If you find this useful in your research, please consider citing:
 }
 ```
 
+## Example usage (OpticsAugment)
+Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/__generate__/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
+```
+cd /optics_augment/__generate__
+```
+```
+python train_dnn.py --root_dir <path_to_dataset> --model_dir $path_to_modeldir --name <model_name> --num_workers <num_workers>
+```
 
+Pipelining with AugMix is also possible by adding `--augmix`.
 
 
 ## Example usage (OpticsBench)
@@ -150,3 +159,5 @@ root/
 		...
 	...
 ```
+
+
