@@ -26,7 +26,7 @@ If you find this useful in your research, please consider citing:
 Creates / requires a folder hierarchy like: 
 
 ```
-data/
+root/
 	images
 		ImageNette
 			/val
@@ -64,11 +64,11 @@ data/
 				opticsblur
 						astigmatism
                             1/
-							resnet50_sev1.json
-							efficientnet_b0_sev1.json
-							convnext_xy_sev1.json
+							resnet50.json
+							efficientnet_b0.json
+							convnext_xy.json
 							...
-							resnet50_sev2.json
+							resnet50.json
 							...
                             2/
                             3/...
@@ -104,8 +104,8 @@ data/
 			...
 
 	models (or any setup, if required)
-		resnet50_augmix_blur_augment
-		efficientnet_b0_augmix_blur_augment
+		resnet50_augmix_optics_augment
+		efficientnet_b0_augmix_optics_augment
 		convnext_xy_augmix
 		...
 	...
@@ -121,5 +121,6 @@ python benchmark.py --generate_datasets --database imagenet-1k_val
 ### Inference / Evaluate
 ```
 cd /opticsbench/__generate__
-python benchmark.py --run_all --path_to_root_folder <path_including_images_and_models_folder> --models __all__ 
+python benchmark.py --run_all --path_to_root_folder <root> --models __all__ 
 ```
+Available model lists can be found in opticsbench/__generate__/__registered_model_lists.py__
