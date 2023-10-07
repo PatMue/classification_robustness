@@ -23,7 +23,24 @@ If you find this useful in your research, please consider citing:
 
 ## Example usage (OpticsBench)
 
-Creates / requires a folder hierarchy like: 
+### Dataset generation
+```
+cd /opticsbench/__generate__
+python benchmark.py --generate_datasets --database imagenet-1k_val 
+```
+Creates folders like: root/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>
+
+### Inference / Evaluate
+```
+cd /opticsbench/__generate__
+python benchmark.py --run_all --path_to_root_folder <root> --models __all__ 
+```
+Available model lists can be found in opticsbench/__generate__/__registered_model_lists.py__
+
+Creates elements like: root/eval/<dataset>/<val,corruptions>/<corruption_name>/<severity>/<model_name>.json
+
+
+### Example tree (folder / files hierarchy): 
 
 ```
 root/
@@ -110,17 +127,3 @@ root/
 		...
 	...
 ```
-
-
-### Dataset generation
-```
-cd /opticsbench/__generate__
-python benchmark.py --generate_datasets --database imagenet-1k_val 
-```
-
-### Inference / Evaluate
-```
-cd /opticsbench/__generate__
-python benchmark.py --run_all --path_to_root_folder <root> --models __all__ 
-```
-Available model lists can be found in opticsbench/__generate__/__registered_model_lists.py__
