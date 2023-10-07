@@ -19,4 +19,12 @@ If you find this useful in your research, please consider citing:
 ```
 ## Example usage
 
-% to be done 
+### Dataset generation (OpticsBench)
+```
+cd /opticsbench/__generate__
+python benchmark.py --generate_datasets --database imagenet-1k_val 
+```
+
+### Inference on dataset (OpticsBench)
+cd /opticsbench/__generate__
+python benchmark.py --run_all --path_to_root_folder <top_level_path_including_images_and_models_folder> --models __all__ 
