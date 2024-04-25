@@ -4,6 +4,10 @@
 [ICCV2023 AROW Workshop official code submission. Classification robustness to common optical aberrations](https://openaccess.thecvf.com/content/ICCV2023W/AROW/html/Muller_Classification_Robustness_to_Common_Optical_Aberrations_ICCVW_2023_paper.html)
 
 \#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and also provides the code for data augmentation with OpticsAugment.
+If you want to **generate our pre-defined corruptions from OpticsBench use**: 
+```
+python benchmark.py --generate_datasets --database imagenet-1k_val 
+```
 
 #### Why?
 Computer vision using deep neural networks (DNNs) has brought about seminal changes in people's lives. DNNs have to behave in a robust way to disturbances such as noise, pixelation, or blur. Blur directly impacts the performance of DNNs, which are often approximated as a disk-shaped kernel to model defocus. However, optics suggests that there are different kernel shapes depending on wavelength and location caused by optical aberrations. In practice, as the optical quality of a lens decreases, such aberrations increase. 
