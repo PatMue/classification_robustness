@@ -66,6 +66,7 @@ DNN | 1 | 2 | 3 | 4 | 5
  EfficientNet  | 4.35 | 6.32 | 6.70 | 4.62 | 3.69
 
 </br>
+</br>
 
 # How to use the repository:
 
@@ -75,13 +76,16 @@ First, navigate to: ``` cd /optics_augment/__generate__ ```. Then run the follow
 ```
 python train_dnn.py --root_dir <path_to_dataset> --model_dir $path_to_modeldir --name <model_name> --num_workers <num_workers>
 ```
-
 Pipelining with AugMix is also possible by adding `--augmix`.
 
+</br>
 
-## Example usage (OpticsBench)
 
-### Dataset generation (*Generate OpticsBench image corruptions*)
+## Example usage (OpticsBench) - Generate Image Corruptions & Evaluate
+
+</br>
+
+### Dataset generation: *Generate OpticsBench image corruptions*
 First, navigate to: ``` cd /opticsbench/__generate__ ```. Then run the following code snippet to create all image corruptions: 
 ```
 python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_clean_validation_images>
@@ -89,6 +93,8 @@ python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_pa
 The above command calls the function [__generate__/benchmark.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/__generate__/benchmark.py#L985C5-L985C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
 
 If you have your clean ImageNet dataset in directory ``` /images/val ```, this will put the OpticsBench corruptions in ```/images/corruptions/<corruption_name> ```.
+
+</br> 
 
 ### Inference / Evaluate
 Navigate to ```cd /opticsbench/__generate__``` and then run:
