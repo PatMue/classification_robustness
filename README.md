@@ -3,6 +3,8 @@
 
 [ICCV2023 AROW Workshop official code submission. Classification robustness to common optical aberrations](https://openaccess.thecvf.com/content/ICCV2023W/AROW/html/Muller_Classification_Robustness_to_Common_Optical_Aberrations_ICCVW_2023_paper.html)
 
+\#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and also provides the code for data augmentation with OpticsAugment.
+
 #### Why?
 Computer vision using deep neural networks (DNNs) has brought about seminal changes in people's lives. DNNs have to behave in a robust way to disturbances such as noise, pixelation, or blur. Blur directly impacts the performance of DNNs, which are often approximated as a disk-shaped kernel to model defocus. However, optics suggests that there are different kernel shapes depending on wavelength and location caused by optical aberrations. In practice, as the optical quality of a lens decreases, such aberrations increase. 
 
@@ -59,6 +61,10 @@ DNN | 1 | 2 | 3 | 4 | 5
  MobileNet | 3.58 | 4.92 | 4.78 | 3.69 | 3.07 
  EfficientNet  | 4.35 | 6.32 | 6.70 | 4.62 | 3.69
 
+</br>
+
+# How to use the repository:
+
 ## Example usage (OpticsAugment)
 Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/__generate__/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
 ```
@@ -80,7 +86,7 @@ cd /opticsbench/__generate__
 ```
 python benchmark.py --generate_datasets --database imagenet-1k_val 
 ```
-Creates folders: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
+The above command calls the function [__generate__/benchmark.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/__generate__/benchmark.py#L985C5-L985C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
 
 ### Inference / Evaluate
 ```
