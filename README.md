@@ -71,9 +71,7 @@ DNN | 1 | 2 | 3 | 4 | 5
 
 ## Example usage (OpticsAugment)
 Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/__generate__/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
-```
-cd /optics_augment/__generate__
-```
+First, navigate to: ``` cd /optics_augment/__generate__ ```. Then run the following code snippet to use OpticsAugment training:
 ```
 python train_dnn.py --root_dir <path_to_dataset> --model_dir $path_to_modeldir --name <model_name> --num_workers <num_workers>
 ```
@@ -83,10 +81,8 @@ Pipelining with AugMix is also possible by adding `--augmix`.
 
 ## Example usage (OpticsBench)
 
-### Dataset generation
-```
-cd /opticsbench/__generate__
-```
+### Dataset generation (*Generate OpticsBench image corruptions*)
+First, navigate to: ``` cd /opticsbench/__generate__ ```. Then run the following code snippet to create all image corruptions: 
 ```
 python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_clean_validation_images>
 ```
@@ -95,15 +91,12 @@ The above command calls the function [__generate__/benchmark.create_benchmark](h
 If you have your clean ImageNet dataset in directory ``` /images/val ```, this will put the OpticsBench corruptions in ```/images/corruptions/<corruption_name> ```.
 
 ### Inference / Evaluate
-```
-cd /opticsbench/__generate__
-```
+Navigate to ```cd /opticsbench/__generate__``` and then run:
 ```
 python benchmark.py --run_all --path_to_root_folder <root> --models __all__ 
 ```
-
 * The folder hierarchy of the image dataset is mirrored to the eval folder at initialization of the inference / evaluation.
-* Creates elements: `data/eval/<dataset>/<val,corruptions>/<corruption_name>/<severity>/<model_name>.json`
+* Puts result ```.json```files into: ```root/eval/<dataset>/val``` and ```root/eval/<dataset>/corruptions>/<corruption_name>/<severity>/<model_name>.json```
 * Each json contains information regarding severity, corruption, dataset and the evaluated metrics (accuracy)
 
 ### Adding user models
