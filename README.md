@@ -6,7 +6,7 @@
 \#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and also provides the code for data augmentation with OpticsAugment.
 If you want to **generate our pre-defined corruptions from OpticsBench use**: 
 ```
-python benchmark.py --generate_datasets --database imagenet-1k_val 
+python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_validation_images>
 ```
 
 #### Why?
@@ -88,9 +88,11 @@ Pipelining with AugMix is also possible by adding `--augmix`.
 cd /opticsbench/__generate__
 ```
 ```
-python benchmark.py --generate_datasets --database imagenet-1k_val 
+python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_clean_validation_images>
 ```
 The above command calls the function [__generate__/benchmark.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/__generate__/benchmark.py#L985C5-L985C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
+
+If you have your clean ImageNet dataset in directory ``` /images/val ```, this will put the OpticsBench corruptions in ```/images/corruptions/<corruption_name> ```.
 
 ### Inference / Evaluate
 ```
