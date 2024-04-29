@@ -138,11 +138,9 @@ def create_train_val_split_from_train(path_to_train_folder="",path_to_new_datase
 
 	if not len(os.listdir(trainnew)):
 		shutil.rmtree(trainnew)
-		# kopiere zunächst alle Daten in train/
 		shutil.copytree(path_to_train_folder,trainnew,ignore=ig_ftypes)
 		
 	if not len(os.listdir(valnew)):
-		# kopiere dateistruktur nach val/ (ohne daten kopieren)
 		os.removedirs(valnew)
 		shutil.copytree(trainnew,valnew,ignore=ig_f)
 	
