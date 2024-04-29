@@ -131,7 +131,6 @@ def create_train_val_split_from_train(path_to_train_folder="",path_to_new_datase
 			print(f"created: {f}")
 
 	
-	# erstelle jetzt aus den Pfaden die gewünschten Splits:
 	def ig_f(dir, files):
 		return [f for f in files if os.path.isfile(os.path.join(dir, f))]
 	def ig_ftypes(dir, files): # ignore_list
@@ -148,13 +147,7 @@ def create_train_val_split_from_train(path_to_train_folder="",path_to_new_datase
 		shutil.copytree(trainnew,valnew,ignore=ig_f)
 	
 	if move_to_val:
-		# dann verschiebe zufällig samples hieraus in val/
-		# imfolder mit 1300 bildern als beispiel: 
-		# teile gemäß split auf --> random.choice()
 		for folder in tqdm(os.listdir(trainnew),desc="train/val split: ",total=len(os.listdir(trainnew))):
-			# for a single folder, do: 	
-			# wähle eine anzahl n indizes
-			# wähle eine zufällige stichprobe  (ziehen ohne zurücklegen)
 			fnames = os.listdir(os.path.join(trainnew,folder))
 			sz = len(fnames) # current folder 
 			sample = random.sample(fnames,int(round(sz*(1-split))))	
