@@ -216,6 +216,7 @@ def test_imagenet_dataset():
 
 
 if __name__ == "__main__":
+	pass
 	#test_imagenet_dataset()
 	#test_random_aug()
 	#test_speed_augmentation(path_to_images=impath)
