@@ -142,7 +142,7 @@ class OpticsAugment():
 
 
 	@staticmethod
-	def _apply(img,kernel,devices=None): # should work for img_batch also 
+	def _apply(img,kernel,padding_mode='constant',devices=None): # should work for img_batch also 
 		#### this should be executed on batches at once, if possible:
 		"""
 		Args:
@@ -160,7 +160,7 @@ class OpticsAugment():
 		#try:
 		ncol = kernel.shape[-3]
 		return torch.stack(parallel_apply([OpticsAugment._conv2d]*ncol,\
-			[(img[:,ch,:,:].unsqueeze(1),kernel[:,ch,:,:].unsqueeze(1)) for ch in range(ncol)])\
+			[(img[:,ch,:,:].unsqueeze(1),kernel[:,ch,:,:].unsqueeze(1),padding_mode) for ch in range(ncol)])\
 			,dim=0)
 			
 
