@@ -174,20 +174,19 @@ class OpticsAugment():
 		return param-3, severity-1
 
 
+
 	@staticmethod
-	def _conv2d(batch,kernel):
+	def _conv2d(batch,kernel,padding_mode="constant"):
 		"""!
-		#requires torch>=1.9.0
-		# torch.backends.cudnn.deterministic = True (consider)	
 		Args:
 			batch <torch.tensor>: (minibatch,in_channels,iH,iW)
 			--> (batchsize,1,iH,iW): (100,1,224,224)
 			kernel <torch.tensor>: (out_channels, in_channels / group ,kH,kW)
-			--> (1,1,kH,kW): (1,1,25,25)
-		
-			padding='same', dilation = 1 only for uneven sized kernels
+			--> (1,1,kH,kW): (1,1,25,25)		
 		"""
-		return F.conv2d(batch,kernel,bias=None,stride=1,padding='same',dilation=1,groups=1).squeeze()
+		p = kernel.shape[-1]//2
+		return F.conv2d(F.pad(batch,(p,p,p,p),mode=padding_mode),
+				  kernel,bias=None,stride=1,padding='valid',dilation=1,groups=1).squeeze()
 
 
 BlurAugment= OpticsAugment  #alias 

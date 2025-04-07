@@ -1,5 +1,5 @@
 #################################
-# (c) Patrick Müller 2023 
+# (c) Patrick Müller 2023- 
 #################################
 
 
@@ -15,7 +15,7 @@ If you find this useful in your research, please cite:
 
 """
 __license__ = "MIT-license"
-__author__ = "Patrick Müller"
+__author__ = "Patrick M\"uller"
 
 import os
 import shutil
@@ -38,12 +38,9 @@ from torch.nn.parallel import parallel_apply
 from torchvision import datasets,transforms,models
 from PIL import Image
 
-
 import matplotlib.pyplot as plt 
 
 #from robustbench.model_zoo.imagenet import imagenet_models  # switched to manual download since there are bugs in current version of robustbench repo 
-
-
 import utils
 
 sys.path.append(os.path.abspath(os.path.join("..","..","optics_augment","__generate__")))
@@ -53,16 +50,19 @@ import __registered_model_lists__
 
 logger = logging.getLogger(__name__)
 
-
 if torchvision.__version__ >= "0.11.0":
-	__models__ = ['alexnet', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnext50_32x4d', 'resnext101_32x8d', 'wide_resnet50_2', 'wide_resnet101_2', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19_bn', 'vgg19', 'squeezenet1_0', 'squeezenet1_1', 'inception_v3', 'densenet121', 'densenet169', 'densenet201', 'densenet161', 'mobilenet_v2', 'mobilenet_v3_large', 'mobilenet_v3_small', 'mnasnet0_5', 'mnasnet0_75', 'mnasnet1_0', 'mnasnet1_3', 'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0', 'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2', 'efficientnet_b3', 'efficientnet_b4', 'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7',  'regnet_x_400mf', 'regnet_x_800mf', 'regnet_x_1_6gf', 'regnet_x_3_2gf', 'regnet_x_8gf', 'regnet_x_16gf', 'regnet_x_32gf','regnet_y_800mf', 'regnet_y_1_6gf', 'regnet_y_3_2gf', 'regnet_y_8gf', 'regnet_y_16gf', 'regnet_y_32gf']
+	__models__ = ['alexnet', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnext50_32x4d', 'resnext101_32x8d', 'wide_resnet50_2', 
+			   'wide_resnet101_2', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19_bn', 'vgg19', 'squeezenet1_0', 'squeezenet1_1', 
+			   'inception_v3', 'densenet121', 'densenet169', 'densenet201', 'densenet161', 'mobilenet_v2', 'mobilenet_v3_large', 'mobilenet_v3_small', 
+			   'mnasnet0_5', 'mnasnet0_75', 'mnasnet1_0', 'mnasnet1_3', 'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0', 
+			   'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2', 'efficientnet_b3', 'efficientnet_b4', 'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7',  
+			   'regnet_x_400mf', 'regnet_x_800mf', 'regnet_x_1_6gf', 'regnet_x_3_2gf', 'regnet_x_8gf', 'regnet_x_16gf', 'regnet_x_32gf','regnet_y_800mf', 
+			   'regnet_y_1_6gf', 'regnet_y_3_2gf', 'regnet_y_8gf', 'regnet_y_16gf', 'regnet_y_32gf']
 		
-
 if torchvision.__version__ >= '0.12.0':
 	# https://pytorch.org/vision/0.12/models.html , https://pytorch.org/vision/0.11/models.html
 	__models__.extend(['vit_b_16','vit_b_32','vit_l_16','vit_l_32',\
 		'convnext_tiny','convnext_small','convnext_base','convnext_large'])
-# vision transformers and convnext is available from torchvision 0.12 ... (requires python >= 3.7, so not availble for training)
 
 
 class ImageNetDatasetConverted(torch.utils.data.Dataset):
@@ -130,14 +130,9 @@ class ConvertTarget():
 
 (re-use existing code if available)
 
-* do inference on simrechner (also colab possible if required, but base on simrechner)
-
-
 # ImageNette/val Benchmark
 # ImageNet-100/val Benchmark
 # ImageNet-1k/val Benchmark
-
-# develop everything for ImageNette, then do the same on the other ones
 
 # create dataloader for each folder:
 
@@ -222,12 +217,8 @@ data/
 		...
 	...
 
-
 # 	evaluate image folder in images/ for one epoch,
 	save results to same hierarchy: eval/
-
-#   assumes that images are already generated and above folders exist? No, can create here using torch conv2d, using blur_stack only
-
 """
 
 
@@ -720,7 +711,7 @@ class CreateBenchmark():
 		}
 
 	def __init__(self,testdata_path,psfstack_path=None,all_modes=True,\
-			batch_size=50,severities=None):
+			batch_size=50,severities=None,padding_mode="constant"):
 		"""
 		testdata_path: e.g. ..,ImageNette,val
 		"""
@@ -739,6 +730,7 @@ class CreateBenchmark():
 		self.create_benchmark_paths()
 		self.batch_size = batch_size
 		self.severities = severities if severities is not None else [1,2,3,4,5]
+		self.padding_mode = padding_mode
 
 		self.val_transform = transforms.Compose([
 			transforms.Resize(256),
@@ -747,7 +739,6 @@ class CreateBenchmark():
 			#transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 			])
 
-		# unnormalize
 		self.save_transform = transforms.ToPILImage()
 		
 		dataset = datasets.ImageFolder(self.paths["val"])
@@ -819,12 +810,11 @@ class CreateBenchmark():
 		kernels = self.psf_stack[:, severity-1, _chroma,:]
 		return torch.stack(\
 			parallel_apply([BlurAugment._apply]*len(images),\
-			[(im,kernels[_param,:].unsqueeze(0)) for im,_param in zip(images,_params)]),\
+			[(im,kernels[_param,:].unsqueeze(0),self.padding_mode) for im,_param in zip(images,_params)]),\
 			dim=0).squeeze()
 
 
 	def _create_folders(self,fpaths,outdir):
-		# synset paths for corruption xy
 		for fpath in fpaths:
 			fpath = os.path.normpath(fpath)
 			folder,imname = os.path.split(fpath)
@@ -994,17 +984,18 @@ def create_benchmark(**kwargs):
 	benchmark = CreateBenchmark(testdata_path,
 		psfstack_path=psfstack_path,\
 		batch_size=batch_size,\
-		severities=kwargs.get("severities",[1,2,3,4,5]))
+		severities=kwargs.get("severities",[1,2,3,4,5]),
+		padding_mode=kwargs.get("padding_mode","constant"))
 	benchmark.__get__()
 
 
 if __name__ == "__main__":
-	#__test__(batch_size=25)
 	argparser = argparse.ArgumentParser()
 	argparser.add_argument("-t","--testdata_path",default="",type=str)
 	argparser.add_argument("--path_to_root_folder",default="",type=str,\
 		help="path to root for eval, images etc.")
 	argparser.add_argument("-b","--batch_size",default=128,type=int)
+	argparser.add_argument("--padding_mode",default="constant",type=str)
 	argparser.add_argument("--num_workers",default=6,type=int)
 	argparser.add_argument("-m","--model",default="squeezenet1_0",type=str)
 	argparser.add_argument("--run_all",action="store_true",\
@@ -1024,7 +1015,6 @@ if __name__ == "__main__":
 
 	if kwargs['generate_datasets']:
 		assert os.path.exists(kwargs['testdata_path'])
-		#if input("Do you want to create the images datasets?") == "yes":
 		create_benchmark(**kwargs)
 
 
