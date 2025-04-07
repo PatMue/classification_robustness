@@ -142,7 +142,7 @@ class OpticsAugment():
 
 
 	@staticmethod
-	def _apply(img,kernel,padding_mode='constant',devices=None): # should work for img_batch also 
+	def _apply(img,kernel,padding_mode='zeros',devices=None): # should work for img_batch also 
 		#### this should be executed on batches at once, if possible:
 		"""
 		Args:
@@ -176,7 +176,7 @@ class OpticsAugment():
 
 
 	@staticmethod
-	def _conv2d(batch,kernel,padding_mode="constant"):
+	def _conv2d(batch,kernel,padding_mode="zeros"):
 		"""!
 		Args:
 			batch <torch.tensor>: (minibatch,in_channels,iH,iW)

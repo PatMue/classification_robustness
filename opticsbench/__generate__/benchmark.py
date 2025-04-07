@@ -711,7 +711,7 @@ class CreateBenchmark():
 		}
 
 	def __init__(self,testdata_path,psfstack_path=None,all_modes=True,\
-			batch_size=50,severities=None,padding_mode="constant"):
+			batch_size=50,severities=None,padding_mode="zeros"):
 		"""
 		testdata_path: e.g. ..,ImageNette,val
 		"""
@@ -985,7 +985,7 @@ def create_benchmark(**kwargs):
 		psfstack_path=psfstack_path,\
 		batch_size=batch_size,\
 		severities=kwargs.get("severities",[1,2,3,4,5]),
-		padding_mode=kwargs.get("padding_mode","constant"))
+		padding_mode=kwargs.get("padding_mode","zeros"))
 	benchmark.__get__()
 
 
@@ -995,7 +995,7 @@ if __name__ == "__main__":
 	argparser.add_argument("--path_to_root_folder",default="",type=str,\
 		help="path to root for eval, images etc.")
 	argparser.add_argument("-b","--batch_size",default=128,type=int)
-	argparser.add_argument("--padding_mode",default="constant",type=str)
+	argparser.add_argument("--padding_mode",default="zeros",type=str)
 	argparser.add_argument("--num_workers",default=6,type=int)
 	argparser.add_argument("-m","--model",default="squeezenet1_0",type=str)
 	argparser.add_argument("--run_all",action="store_true",\
