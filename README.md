@@ -1,5 +1,5 @@
 # Classification robustness to common optical aberrations
-(c) Patrick Müller 2023 (for license see /opticsbench, /opticsaugment)
+(for license see /opticsbench, /opticsaugment)
 
 [ICCV2023 AROW Workshop official code submission. Classification robustness to common optical aberrations](https://openaccess.thecvf.com/content/ICCV2023W/AROW/html/Muller_Classification_Robustness_to_Common_Optical_Aberrations_ICCVW_2023_paper.html)
 
