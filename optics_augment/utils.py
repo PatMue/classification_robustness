@@ -10,6 +10,29 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.distributed as dist
+from torch.utils.data import Dataset
+
+class ImageNetDataset(Dataset):
+	""" 
+	ImageNetDataset as a base class 
+	"""
+	def __init__(self,dataset,preprocess):
+		self.dataset = dataset 
+		self.classes = dataset.classes
+		self.preprocess = preprocess
+		self.index = 0
+		
+	def __getitem__(self,index):
+		img,target = self.dataset[index]
+		self.index = index
+		return self.preprocess(img),target
+	
+	def __next__(self):
+		self.index += 1
+		return self.__getitem__(self.index)
+	
+	def __len__(self):
+		return len(self.dataset)
 
 
 # added: Patrick Müller 2023
@@ -381,16 +404,12 @@ def store_model_weights(model, checkpoint_path, checkpoint_key="model", strict=T
     Returns:
         output_path (str): The location where the weights are saved.
     """
-    # Store the new model next to the checkpoint_path
     checkpoint_path = os.path.abspath(checkpoint_path)
     output_dir = os.path.dirname(checkpoint_path)
 
-    # Deep copy to avoid side-effects on the model object.
     model = copy.deepcopy(model)
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
 
-    # Load the weights to the model to validate that everything works
-    # and remove unnecessary weights (such as auxiliaries, etc)
     if checkpoint_key == "model_ema":
         del checkpoint[checkpoint_key]["n_averaged"]
         torch.nn.modules.utils.consume_prefix_in_state_dict_if_present(checkpoint[checkpoint_key], "module.")

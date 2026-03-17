@@ -1,9 +1,4 @@
 """
-
-#################################
-    (c) Patrick Müller 2023 
-#################################
-
 If you find this useful in your research, please cite:
 
 @article{mueller2023_opticsbench,
@@ -15,7 +10,7 @@ If you find this useful in your research, please cite:
 
 """
 
-__author__ = "Patrick Müller (2023)"
+__author__ = "Patrick Müller"
 
 
 # -*- coding: utf-8 -*-
@@ -24,6 +19,7 @@ __author__ = "Patrick Müller (2023)"
 # Retrain a DNN from pytorch
 # based on: https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 
+from glob import glob
 import os
 import copy
 from tqdm import tqdm
@@ -35,13 +31,9 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.optim import lr_scheduler
 import torch.backends.cudnn as cudnn
-from torchvision import datasets
-from torchvision import transforms
 from torchvision import models
 import PIL
 from PIL import Image
-import numpy as np
-import matplotlib.pyplot as plt
 
 import utils # https://github.com/pytorch/vision/blob/1353df9e45aae6739c23db4a053c3d9a9fd17b3d/references/classification/
 
@@ -58,19 +50,16 @@ from recipes import efficientnet_b0, \
     regnet_y_8gf,\
     squeezenet1_0
 
+import preprocessing as preprocessing
+from preprocessing import DefaultNormalize
+from augment import OpticsAugment
 
 
 __recipes__ = [efficientnet_b0,efficientnet_b4,mobilenet_v3_large,resnet50,\
     resnet101,resnext50_32x4d,densenet161,alexnet,vgg16,regnet_y_8gf,squeezenet1_0]
 
 __recipes__ = {r.__name__.split("recipes.")[1]: r.load_recipe for r in __recipes__}
-
-
 __effective_batch_size__ = 256  # 8 V100 GPUs, bs = 32 -> 32*8 =256
-
-
-import recipes._preprocessing as _preprocessing
-from recipes._augment import OpticsAugment
 
 
 def _get_model(name,device='cpu'):
@@ -81,18 +70,13 @@ def _get_model(name,device='cpu'):
     return model_dnn
 
 
-def _get_savepath(fdir,fullname,ext):
+def _get_savepath(fdir, fullname, ext):
     """ multiple days computation -> do not overwrite existing temp files"""
-    savepath = os.path.join(fdir,fullname + ext)
-    if os.path.exists(savepath):
-        i = 1
-        exists = True
-        while exists:
-            if os.path.exists(savepath):
-                savepath = os.path.join(fdir, fullname + f"{i}" + ext)
-                i+=1
-            else:
-               exists=False
+    savepath = os.path.join(fdir, fullname + ext)
+    i = 1
+    while os.path.exists(savepath):
+        savepath = os.path.join(fdir, f"{fullname}{i}{ext}")
+        i += 1
     return savepath
 
 
@@ -101,9 +85,9 @@ def _getdataloaders(setup,optics_augment=True,augmix=False):
     preprocessing and dataloading 
     """	
     if optics_augment and not augmix:
-        preprocessing_fcn = _preprocessing.opticsaugment
+        preprocessing_fcn = preprocessing.opticsaugment
     else:
-        preprocessing_fcn = _preprocessing.augmix if augmix else _preprocessing.basic
+        preprocessing_fcn = preprocessing.augmix if augmix else preprocessing.basic
         
     print(preprocessing_fcn)
     image_datasets,dataloaders = preprocessing_fcn(setup)
@@ -111,20 +95,18 @@ def _getdataloaders(setup,optics_augment=True,augmix=False):
     return image_datasets,dataloaders
 
 
-def _get_checkpoint_load_path(savename,setup):
-    # get the load path for last available checkpoint:
-    # use last existing checkpoint (_temp<i>.pt): make visible to checkpoint loader
-    # in train() --> <model_name>_temp<i+1>.pt	
-    model_path = _get_savepath(setup["model_dir"],f"{os.path.splitext(savename)[0]}_temp",".pt")
-    next = model_path.split("_temp")[1].split(".pt")[0] # >=1 by design if _temp.pt exists 
-    if next:
-        next = int(next)
-        if next==1:
-            model_path = model_path.split("_temp")[0] + "_temp.pt"
-        else: 
-            load = next-1
-            model_path = model_path.split("_temp")[0] + f"_temp{load}.pt"
-    return model_path
+def _get_checkpoint_load_path(savename, setup):
+    base_name = os.path.splitext(savename)[0]
+    search_pattern = os.path.join(setup["model_dir"], f"{base_name}_temp*.pt")
+    
+    existing_ckpts = glob.glob(search_pattern)
+    
+    if not existing_ckpts:
+        return os.path.join(setup["model_dir"], f"{base_name}_temp.pt")
+        
+    latest_ckpt = max(existing_ckpts, key=os.path.getmtime)
+    return latest_ckpt
+
 
 def _remove_module_from_state_dict(state_dict):
     """
@@ -165,7 +147,6 @@ def _get_recipe(setup,model_dnn,**kwargs):
 def _get_train_config(setup,model_dnn,optics_augment=True,augmix=False,**kwargs):
     """
     load_recipe from /recipes and configure training setup 
-    
     contains optimizer, lr_scheduler and other training setup <dict>     
     """		
     setup, model_dnn, model_name = _get_recipe(setup,model_dnn,**kwargs)        
@@ -192,12 +173,9 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
     num_epochs
     ...
     batch_size: <int>, just for printing
-    optics_augment: BlurAugment object to apply the augmentation 
-    
-    """
-    if optics_augment is None and kwargs.get("blur_augment",None):
-        optics_augment = kwargs["blur_augment"]  # version compatibility 
-    
+    optics_augment: OpticsAugment object to apply the augmentation 
+    """    
+
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
     class_names = image_datasets['train'].classes
 
@@ -211,7 +189,7 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    model = nn.DataParallel(model).cuda() # Distribute model across gpus 
+    model = model.to(device) 
     cudnn.benchmark = True
 
     loss_train_curve = [None]*num_epochs
@@ -221,22 +199,23 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
 
     assert start_at_epoch < num_epochs, \
         f"Neural Network already trained for all {num_epochs} epochs, stop."
+    
+    best_epoch = start_at_epoch
+    best_epoch_loss = torch.inf
 
     for epoch in range(start_at_epoch,num_epochs):
         print(f'Epoch {epoch}/{num_epochs - 1}')
         print('-' * 10)
 
-        # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                model.train()  # Set model to training mode
+                model.train()
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()
 
             running_loss = 0.0
             running_corrects = 0
 
-            # Iterate over data.
             for inputs, targets in dataloaders[phase]:
                 if phase == "train" and kwargs.get("pipelined",None):
                     inputs,probabilities = inputs
@@ -252,18 +231,15 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
                     
                 optimizer.zero_grad()
 
-                # forward
                 with torch.set_grad_enabled(phase == 'train'):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, targets)
 
-                    # backward + optimize only if in training phase
-                    if phase == 'train': # this is the actual training --
+                    if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
-                # statistics
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == targets.data)
 
@@ -288,7 +264,6 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
                 loss_val_curve[epoch] = epoch_loss
                 acc_val_curve[epoch] = epoch_acc
 
-        # deep copy the model
         torch.save([loss_train_curve,loss_val_curve,acc_train_curve,acc_val_curve],\
             savepath_epoch_curves)
 
@@ -301,13 +276,14 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': best_epoch_loss,
                     'acc': best_acc
-                    }, savepath_epoch)
+                    }, 
+                    savepath_epoch
+                )
 
 
     print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
     print(f'Best val Acc: {best_acc:4f}')
 
-    # load best model weights and save:
     model.load_state_dict(best_model_wts)
     torch.save({
                 'epoch': num_epochs,
@@ -317,71 +293,57 @@ def train(model, dataloaders, image_datasets,device="cpu",savepath="",\
                 'loss': best_epoch_loss,
                 'acc':best_acc
                 }, savepath)
-    # save final learning curve:
     torch.save([loss_train_curve,loss_val_curve,acc_train_curve,acc_val_curve],savepath_curves)
-
 
     curves = [loss_train_curve,loss_val_curve,acc_train_curve,acc_val_curve]
     return model,best_epoch_loss,best_epoch, curves
 
 
-def main(name="efficientnet_b0",clean=True,augmix=False,optics_augment=True,**kwargs):
+def main(args):
     """!
     name: model name, see list below or at recipes 
-    clean: train on clean data or on imagenet-100-optics (clean + param 4, sev 1-5)
-    
-    tbd: extend by transformer networks, and ConvNeXt    
+    clean: train on clean data or on imagenet-100-optics (clean + param 4, sev 1-5)    
+    TODO: extend by transformer networks, and ConvNeXt    
     """
-    default_dir = r"S:\Framework_Users\NeuralNetsProjects"
-    print(f"\n\nNow training {name}\n\n")
+    args.optics_augment = not args.opticsaugment_off
 
-    if kwargs.get('root_dir',None) is None:
-        kwargs.pop('root_dir')
-    if kwargs.get('model_dir',None) is None:
-        kwargs.pop('model_dir')
-    
     setup = {}
-    #setup["ann_path"] = os.path.join(setup["root_dir"],'annotations_val_2012_classes.json')
-    if clean:
-        setup["root_dir"]  = kwargs.get('root_dir',os.path.join(default_dir,\
-            r"imagenet-100_optics_new\imagenet100_clean"))
-        setup["model_dir"] = kwargs.get('model_dir',os.path.join(default_dir,\
-			"models",os.path.split(setup['root_dir'])[1]))
-    else:
-        setup["root_dir"]  = kwargs.get('root_dir',os.path.join(default_dir,\
-            r"ImageNet-100_optics_dataset/ImageNet100-optics"))
-        setup["model_dir"] = kwargs.get('model_dir',os.path.join(default_dir,\
-			"models",os.path.split(setup['root_dir'])[1]))
-    
-    print(f"Now training on {os.path.split(setup['root_dir'])}\nmodel_dir: {setup['model_dir']}")
+    setup["root_dir"]  = args.root_dir
+    setup["model_dir"] = args.model_dir 
+    kwargs = args.__dict__
+
+    print(f"Now training {args.model} on {setup['root_dir']}\nmodel_dir: {setup['model_dir']}")
     
     if not os.path.exists(setup["model_dir"]):
         os.makedirs(setup["model_dir"])
     
     setup["train_dir"] = os.path.join(setup["root_dir"],"train")
     setup["val_dir"]   = os.path.join(setup["root_dir"],"val")
-    isgpu = torch.cuda.is_available()
     
-    # https://stackoverflow.com/questions/62907815/pytorch-what-is-the-difference-between-tensor-cuda-and-tensor-totorch-device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device) if torch.cuda.is_available() else "cpu"
         
-    if "mobilenet_large_v3" in name:
+    if "mobilenet_large_v3" in args.model:
         kwargs["take_params"] = "kuan_wang_warm_restarts"
 
-    model_dnn = _get_model(name,device=device)
+    model_dnn = _get_model(args.model,device=device)
     
-    print(f"\nModel: {name}")
+    print(f"\nModel: {args.model}, optics_augment: {args.optics_augment}, augmix: {args.augmix}\n")
     
-    setup, model_dnn = _get_train_config(setup,model_dnn,optics_augment=optics_augment,\
-	    augmix=augmix,**kwargs)
+    setup, model_dnn = _get_train_config(setup,model_dnn,**args.__dict__)
 
+    setup["training"]["pipelined"] = True if (args.optics_augment and args.augmix) else False
 
-    setup["training"]["pipelined"] = True if (optics_augment and augmix) else False
-    setup["training"]["optics_augment"] = OpticsAugment() if optics_augment else None
+    if args.optics_augment:
+        setup["training"]["optics_augment"] = OpticsAugment(
+                                        severity=args.opticsaugment_severity,
+                                        alpha=args.opticsaugment_alpha,
+                                        normalize=DefaultNormalize.get(),
+            		                	device=args.device,
+                                        ) 
+    else:
+        setup["training"]["optics_augment"] = None
 
-    image_datasets,dataloaders = _getdataloaders(setup,optics_augment=optics_augment,\
-        augmix=augmix)
-
+    image_datasets,dataloaders = _getdataloaders(setup,optics_augment=args.optics_augment,augmix=args.augmix)
 
     if setup["model_path"] is not None and os.path.exists(setup["model_path"]):
         checkpoint = torch.load(setup["model_path"])
@@ -394,51 +356,52 @@ def main(name="efficientnet_b0",clean=True,augmix=False,optics_augment=True,**kw
 
     if not os.path.exists(setup["model_dir"]):
         os.makedirs(setup["model_dir"])
-        print("Created new {setup['model_dir']}")
+        print(f"Created new {setup['model_dir']}")
 
-    # now adjust learning rate to effective batch_size: (June 16,2023)
-    effective_batch_size = kwargs['num_gpus'] * setup['training']['batch_size']
+    effective_batch_size = args.num_gpus * setup['training']['batch_size']
 
     for i,__ in enumerate(setup['training']['optimizer'].param_groups):
         learning_rate = setup['training']['optimizer'].param_groups[i]['lr']
         learning_rate *= (effective_batch_size / __effective_batch_size__)
         setup['training']['optimizer'].param_groups[i]['lr'] = learning_rate
         print(f"changed learning rate {i} to: {learning_rate} (effective batch_size {effective_batch_size}"+\
-            ", default: {__effective_batch_size__})")
+            f", default: {__effective_batch_size__})")
 
     print(f"creating: {setup['savepath']}")
     print(f'\ntraining setup:\n{setup["training"]}\n')
+
 
     train(model_dnn,dataloaders, image_datasets,device=device,\
             savepath=setup['savepath'],**setup['training'])
 
 
 if __name__ == "__main__":
-	# store_true: default=False , store_false: default=True
+    # python train_dnn.py --model squeezenet1_0 --root_dir /path/to/imagenet/ --model_dir /path/to/save/model/
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n","--name",default="efficientnet_b0",\
-        help="type the name of the neural network to train")
+
+    parser.add_argument("-m","--model",default="efficientnet_b0",help="model name")
     parser.add_argument("-imagefolderpath","--root_dir",default=None,type=str,\
-        help="set the path of the imagenet dataset containing two folders: train, val")
-    parser.add_argument("-modelpath","--model_dir",default=None,type=str,\
-        help="set the savepath for the model checkpoints")
+                    help="imagenet dataset path containing two folders: train, val")
+    parser.add_argument("--model_dir",default=None,type=str,help="savepath for model checkpoints")
     
     parser.add_argument("--num_workers",default=8,type=int,\
         help="set the number of workers num_worker of the dataloader <= num_cpus (cores)")
     parser.add_argument("--batch_size",default=32,type=int,\
         help="set the batch size of the dataloader")
-    parser.add_argument("--num_gpus",default=1,type=int,\
-        help="set the number of gpus")
+    parser.add_argument("--num_gpus",default=1,type=int,help="set the number of gpus") # FIXME: use DistributedDataParallel
+    parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu", type=str, help="device to train on")
     parser.add_argument("--num_epochs",default=90,type=int,\
         help="set the number of epochs for training")
+    
+    parser.add_argument("--opticsaugment_off",action="store_true",help='turn off opticsaugment for training')
+    parser.add_argument("--opticsaugment_severity",default=3,type=int,help="severity of optics augment, 1-5")
+    parser.add_argument("--opticsaugment_alpha",default=1.0,type=float,help="alpha of optics augment, from symmetric beta distribution, default: 1.0 to have uniform distribution")
 
     parser.add_argument("--augmix",action="store_true",default=False)
-    parser.add_argument("-nobluraugment","--bluraugment_off",action="store_true")
-    args = parser.parse_args().__dict__
+    args = parser.parse_args()
 
     print(f"{''.join(['#']*10)} This is a single GPU script {''.join(['#']*10)}")
 
-
-    main(clean=True,optics_augment=not args['bluraugment_off'],**args)
+    main(args)
 
 # EOF

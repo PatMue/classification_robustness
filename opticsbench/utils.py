@@ -1,7 +1,7 @@
 # 25.02.2023
 import json
+import sys 
 import os
-from lxml import etree
 from tqdm import tqdm
 import shutil 
 import tkinter as tk 
@@ -10,6 +10,128 @@ import subprocess as sp
 import gc
 import torch 
 import inspect
+
+from torch.utils.data import Dataset
+
+def get_dir(ttl=""):
+	root = tk.Tk()
+	root.withdraw()
+	return filedialog.askdirectory(title=ttl)
+
+
+# https://stackoverflow.com/questions/8391411/how-to-block-calls-to-print
+def block_printing(func):
+    def func_wrapper(*args, **kwargs):
+        sys.stdout = open(os.devnull, 'w')
+        value = func(*args, **kwargs)
+        sys.stdout = sys.__stdout__
+        return value
+    return func_wrapper
+
+@block_printing
+def get_model_pretrained(fcn):
+	return fcn(pretrained=True)
+
+
+class ImageNetDataset(Dataset):
+	""" 
+	ImageNetDataset as a base class 
+	"""
+	def __init__(self,dataset,preprocess):
+		self.dataset = dataset 
+		self.classes = dataset.classes
+		self.preprocess = preprocess
+		self.index = 0
+		
+	def __getitem__(self,index):
+		img,target = self.dataset[index]
+		self.index = index
+		return self.preprocess(img),target
+	
+	def __next__(self):
+		self.index += 1
+		return self.__getitem__(self.index)
+	
+	def __len__(self):
+		return len(self.dataset)
+
+
+class ImageNetPathsDataset(torch.utils.data.Dataset):
+	"""
+	ImageNetDataset as a base class , returns images and filepaths
+	"""
+	def __init__(self,dataset,preprocess):
+		self.dataset = dataset
+		self.classes = dataset.classes
+		self.preprocess = preprocess
+		self.index = 0
+
+	def __getitem__(self,index):
+		img,__ = self.dataset[index]
+		fpath,__ = self.dataset.samples[index]
+		self.index = index
+		return self.preprocess(img),fpath
+
+	def __next__(self):
+		self.index += 1
+		return self.__getitem__(self.index)
+
+	def __len__(self):
+		return len(self.dataset)
+
+
+class ImageNetDatasetConverted(torch.utils.data.Dataset):
+	"""
+	convert: <dict> containing input and output dataset names
+	"""
+	def __init__(self,dataset,preprocess,convert=None):
+		self.dataset = dataset
+		self.classes = dataset.classes
+		self.idx_to_class = {v: k for k,v in self.dataset.class_to_idx.items()}
+		self._to_idx = self._class_to_idx(convert) # new dict
+		self.preprocess = preprocess
+
+	def _class_to_idx(self,convert):
+		return convert_imagenet1k_targets_to_x(**convert)
+
+	def _get_new_target(self,target):
+		cls = self.idx_to_class[target]
+		return self._to_idx[cls]
+
+
+	def __getitem__(self,index):
+		img,target = self.dataset[index]
+		return self.preprocess(img),self._get_new_target(target)
+
+	def __len__(self):
+		return len(self.dataset)
+
+
+class ConvertTarget():
+	def __init__(self,database,class_to_idx=None,convert=None):
+		self.name = database.lower()
+		if convert:
+			if self.name.__contains__("imagenet-100") or self.name.__contains__("imagenet100"):
+				convert = {"input":"ImageNet-1k","output":"ImageNet-100"}
+			if self.name.__contains__("imagenette"):
+				convert = {"input":"ImageNet-1k","output":"ImageNette"}
+		self.convert = convert
+		self.class_to_idx = class_to_idx
+		self.idx_to_class = {v: k for k,v in self.class_to_idx.items()}
+		self._to_idx = self._class_to_idx(convert) # new dict
+		self.__true__ = True if self.convert and self.class_to_idx else False
+
+	def _class_to_idx(self,convert):
+		return convert_imagenet1k_targets_to_x(**convert)
+
+	def _get_new_target(self,target:int):
+		cls = self.idx_to_class[target]
+		return self._to_idx[cls]
+
+	def _get_new_target_batch(self,targets):
+		for i,target in enumerate(targets):
+			targets[i] = self._get_new_target(target.item())
+		return targets
 
 
 def _normalize_output(img):
@@ -146,6 +268,7 @@ def create_json_anns_from_xml_files(path_to_val_anns_xml):
 
 
 def parse_xml(xml_file):	
+	from lxml import etree
 	with open(xml_file,'r') as f:
 		xml = f.read()
 	root = etree.fromstring(xml)

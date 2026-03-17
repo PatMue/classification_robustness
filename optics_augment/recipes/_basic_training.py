@@ -9,7 +9,7 @@ from torchvision import datasets
 from torchvision import transforms 
 
 
-def get_training_setup(model_dnn,mode="sgd",**kwargs):
+def get_training_setup(model_dnn:torch.nn.Module,mode="sgd",**kwargs):
     """!
     Default values as from:
     https://github.com/pytorch/vision/tree/main/references/classification

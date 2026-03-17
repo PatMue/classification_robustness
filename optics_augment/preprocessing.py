@@ -4,16 +4,23 @@ import os
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-from torchvision import datasets
-from torchvision import transforms
+from torchvision import datasets, transforms
+
+from augmix import AugMixDataset
 
 
-from ._augmix import AugMixDataset
+class DefaultNormalize:
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+    @staticmethod
+    def get():
+        return transforms.Normalize(mean=DefaultNormalize.mean,std=DefaultNormalize.std)
 
 
 def imagenet_normalization():
     preprocess = transforms.Compose([
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])])
+        transforms.Normalize(mean=DefaultNormalize.mean,std=DefaultNormalize.std)])
     return preprocess 
 
 
@@ -59,7 +66,7 @@ def augmix(setup):
     """!"""	
 
     normalize = transforms.Compose([\
-		transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+		transforms.Normalize(mean=DefaultNormalize.mean,std=DefaultNormalize.std)
 		])
 
     preprocess = transforms.Compose([transforms.ToTensor(),normalize])
@@ -114,13 +121,13 @@ def basic(setup,**kwargs): # shuffle=True for val before 10.02.2023
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(), # mirroring
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transforms.Normalize(mean=DefaultNormalize.mean,std=DefaultNormalize.std)
         ]),
         'val': transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transforms.Normalize(mean=DefaultNormalize.mean,std=DefaultNormalize.std)
         ]),
     }
 
@@ -146,30 +153,4 @@ def as_from_kuan_wang(setup):
     raise NotImplementedError("Deprecated and no longer available. Replace with basic()")
     """!
     modified from https://github.com/kuan-wang/pytorch-mobilenet-v3
-    (preprocessing)
-    traindir,valdir = setup["train_dir"], setup["val_dir"]
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    input_size = 224
-    image_datasets = {\
-        'train':datasets.ImageFolder(traindir, transforms.Compose([
-            transforms.RandomResizedCrop(input_size),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        'val':datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Resize(int(input_size/0.875)),
-            transforms.CenterCrop(input_size),
-            transforms.ToTensor(),
-            normalize,
-        ]))}
-    train_loader = torch.utils.data.DataLoader(
-        image_datasets['train'], batch_size=setup["training"]["batch_size"],
-        shuffle=True,num_workers=n_worker, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(
-        image_datasets['val'],batch_size=setup["training"]["batch_size"], 
-        shuffle=False,num_workers=n_worker, pin_memory=True)    
-    dataloaders = {'train':train_loader,'val':val_loader}   
-    return image_datasets, dataloaders
     """

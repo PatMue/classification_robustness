@@ -1,8 +1,3 @@
-#################################
-# (c) Patrick Müller 2023- 
-#################################
-
-
 """
 If you find this useful in your research, please cite:
 
@@ -20,12 +15,9 @@ __author__ = "Patrick M\"uller"
 import os
 import shutil
 import sys
-import random
 import argparse
 import time
 import copy
-import tkinter as tk
-from tkinter import filedialog
 from tqdm import tqdm
 import json
 import datetime
@@ -34,18 +26,12 @@ import gc
 
 import torch
 import torchvision
-from torch.nn.parallel import parallel_apply
 from torchvision import datasets,transforms,models
 from PIL import Image
 
-import matplotlib.pyplot as plt 
-
 #from robustbench.model_zoo.imagenet import imagenet_models  # switched to manual download since there are bugs in current version of robustbench repo 
-import utils
-
-sys.path.append(os.path.abspath(os.path.join("..","..","optics_augment","__generate__")))
-
-from recipes._augment import BlurAugment, ImageNetDataset
+import utils 
+from utils import block_printing, get_model_pretrained, ImageNetDatasetConverted, ConvertTarget, ImageNetDataset
 import __registered_model_lists__
 
 logger = logging.getLogger(__name__)
@@ -64,157 +50,63 @@ if torchvision.__version__ >= '0.12.0':
 	__models__.extend(['vit_b_16','vit_b_32','vit_l_16','vit_l_32',\
 		'convnext_tiny','convnext_small','convnext_base','convnext_large'])
 
-
-class ImageNetDatasetConverted(torch.utils.data.Dataset):
-	"""
-	ImageNetDataset as a base class
-
-	convert: <dict> containing input and output dataset names
-	"""
-	def __init__(self,dataset,preprocess,convert=None):
-		self.dataset = dataset
-		self.classes = dataset.classes
-		self.idx_to_class = {v: k for k,v in self.dataset.class_to_idx.items()}
-		self._to_idx = self._class_to_idx(convert) # new dict
-		self.preprocess = preprocess
-
-	def _class_to_idx(self,convert):
-		return utils.convert_imagenet1k_targets_to_x(**convert)
-
-	def _get_new_target(self,target):
-		cls = self.idx_to_class[target]
-		return self._to_idx[cls]
-
-
-	def __getitem__(self,index):
-		img,target = self.dataset[index]
-		return self.preprocess(img),self._get_new_target(target)
-
-	def __len__(self):
-		return len(self.dataset)
-
-
-class ConvertTarget():
-	def __init__(self,database,class_to_idx=None,convert=None):
-		self.name = database.lower()
-		if convert:
-			if self.name.__contains__("imagenet-100") or self.name.__contains__("imagenet100"):
-				convert = {"input":"ImageNet-1k","output":"ImageNet-100"}
-			if self.name.__contains__("imagenette"):
-				convert = {"input":"ImageNet-1k","output":"ImageNette"}
-		self.convert = convert
-		self.class_to_idx = class_to_idx
-		self.idx_to_class = {v: k for k,v in self.class_to_idx.items()}
-		self._to_idx = self._class_to_idx(convert) # new dict
-		self.__true__ = True if self.convert and self.class_to_idx else False
-
-	def _class_to_idx(self,convert):
-		return utils.convert_imagenet1k_targets_to_x(**convert)
-
-	def _get_new_target(self,target:int):
-		cls = self.idx_to_class[target]
-		return self._to_idx[cls]
-
-	def _get_new_target_batch(self,targets):
-		for i,target in enumerate(targets):
-			targets[i] = self._get_new_target(target.item())
-		return targets
-
-
 """
-
 1. Assign paths
 2. Run inference
 3. save results
 4. report results
 
-(re-use existing code if available)
-
-# ImageNette/val Benchmark
-# ImageNet-100/val Benchmark
-# ImageNet-1k/val Benchmark
-
 # create dataloader for each folder:
 
 data/
-	images
-		ImageNette
-			/val
-			/corruptions
-				opticsblur
-						astigmatism (param 4,5)
-							1
-							2
-							3
-							4
-							5
-						coma (param 6,7)
-							1
-							2
-							...
-						trefoil  (param 9,10)
-							...
-						defocus_spherical (param 3,8)
-							...
-				common2d
-						defocus_blur
-		ImageNet-100
-			/val
-			/corruptions
-			...
-		ImageNet-1k
-			/val
-			/corruptions
-			...
-
-	eval
-		ImageNette
-			/val
-			/corruptions
-				opticsblur
-						astigmatism (param 4,5)
-							resnet50_sev1
-							efficientnet_b0_sev1
-							convnext_xy_sev1
-							...
-							resnet50_sev2
-							...
-						coma (param 6,7)
-							resnet50
-							efficientnet_b0
-							convnext_xy
-							...
-						trefoil  (param 9,10)
-							resnet50
-							efficientnet_b0
-							convnext_xy
-							...
-						defocus_spherical (param 3,8)
-							resnet50
-							efficientnet_b0
-							convnext_xy
-							...
-				common2d
-						defocus_blur
-							resnet50
-							efficientnet_b0
-							convnext_xy
-							...
-		ImageNet-100
-			/val
-			/corruptions
-			...
-
-		ImageNet-1k
-			/val
-			/corruptions
-			...
-
-	models (or any setup, if required)
-		resnet50_augmix_blur_augment
-		efficientnet_b0_augmix_blur_augment
-		convnext_xy_augmix
+ images/
+  ImageNet-100
+    /val
+	/corruptions
+  	  astigmatism (param 4,5)
+		1
+		2
+		3
+		4
+		5
+      coma (param 6,7)
+		1
+		2
 		...
+      trefoil  (param 9,10)
+		...
+      defocus_spherical (param 3,8)
+		...
+	  common2d
+		defocus_blur
+eval/
+  ImageNet-100
+	/val
+	/corruptions
+    	astigmatism
+			resnet50
+			efficientnet_b0
+			convnext_xy
+			...
+	 	coma
+			resnet50
+			efficientnet_b0
+			convnext_xy
+			...
+		...
+		common2d
+			defocus_blur
+				resnet50
+				efficientnet_b0
+				convnext_xy
+				...
+		...
+  ImageNet-1k
+	/val
+	/corruptions
+	...
+
+models/ 
 	...
 
 # 	evaluate image folder in images/ for one epoch,
@@ -222,50 +114,24 @@ data/
 """
 
 
-# https://stackoverflow.com/questions/8391411/how-to-block-calls-to-print
-# decorator used to block function printing to the console
-def block_printing(func):
-    def func_wrapper(*args, **kwargs):
-        # block all printing to the console
-        sys.stdout = open(os.devnull, 'w')
-        # call the method in question
-        value = func(*args, **kwargs)
-        # enable all printing to the console
-        sys.stdout = sys.__stdout__
-        # pass the return value of the method back
-        return value
-
-    return func_wrapper
-
-@block_printing
-def get_model_pretrained(fcn):
-	return fcn(pretrained=True)
-
 class EvalOpticsBenchmark():
 
 	def __init__(self,path_to_root,path_to_images_folder,path_to_user_models="",\
 			batch_size=25,num_workers=4,quiet=False):
 		"""
-
-		take a neural network, inference on dataset, save results to mirrored folder
-
-
+		take a neural network, infer on dataset, save results to mirrored folder
 		example usage:
-
-		evalBench = EvalOpticsBenchmark(path_to_eval_folder,path_to_images_folder)
-
-		model = evalBench._load_model('resnet50')
-		database = 'ImageNette'
-		mode = 'coma'
-		severity = '2'
-		split = 'corruptions'
-
+			evalBench = EvalOpticsBenchmark(path_to_eval_folder,path_to_images_folder)
+			model = evalBench._load_model('resnet50')
+			database = 'ImageNette'
+			mode = 'coma'
+			severity = '2'
+			split = 'corruptions'
 
 		example usage:
 		***********************************************************************
 		acc = evalBench._run_inference_on_folder(model,database,mode,severity,split=split,\
 			device='cuda')
-
 		evalBench._report(acc,model,database,mode,severity,split=split)
 		*************************************************************************
 		"""
@@ -276,9 +142,7 @@ class EvalOpticsBenchmark():
 		self.num_workers = num_workers
 
 		if not os.path.exists(self.paths["eval"]):
-			# get list of imagefolders to be evaluated...
 			self._mirror_folders()
-
 
 		if quiet:
 			self._get_logfile()
@@ -425,7 +289,6 @@ class EvalOpticsBenchmark():
 	@block_printing
 	def _load_model(self,model_name:str,weights=None):
 		"""
-
 		model_name:  <str>
 			either from description (requires to contain a torchvision model equivalent)
 			or: torchvision model name (as in __models__)
@@ -467,24 +330,11 @@ class EvalOpticsBenchmark():
 			if fcn is None:
 				raise ValueError(f"model {model_name} not found in torchvision.models")
 			else:
-				"""
-				try:
-					if weights is not None:
-						model = fcn(weights=weights)
-					else:
-						raise NotImplementedError("weight definition missing")
-				except TypeError:
-					model = get_model_pretrained(fcn)
-				except NotImplementedError:
-				"""
 				model = get_model_pretrained(fcn)
 				model.__name__ = model_name
 
 				return model
 		else:
-			#try:
-			#	model = models.__dict__.get(usermodel['name'],None)(weights=None)
-			#except TypeError:
 			model = models.__dict__.get(usermodel['name'],None)(pretrained=False)
 			if model is None:
 				raise TypeError(f"Model not found: {usermodel['name']}")
@@ -515,7 +365,6 @@ class EvalOpticsBenchmark():
 				val_transform,convert=convert)
 		else:
 			image_dataset = ImageNetDataset(image_folder,val_transform)
-
 
 		batch_size = self.batch_size
 		# inspired by: https://github.com/BlackHC/toma/blob/master/toma/__init__.py
@@ -574,16 +423,9 @@ class EvalOpticsBenchmark():
 		since = time.time()
 		last = since
 		running_corrects = 0
-		#self.log(f"[DONE] Initializing inference on {path_to_dataset}")
 		with torch.no_grad():
 			for i,(inputs, targets) in enumerate(dataloader):
-				
-				#im = inputs[0]
-				#im = im.moveaxis(0,-1)
-				#plt.imshow(im)
-				#plt.show()
-				
-				
+								
 				inputs = inputs.to(device)
 				targets = targets.to(device)
 				outputs = model(inputs)
@@ -644,7 +486,6 @@ class EvalOpticsBenchmark():
 					self._mirror_subfolder(os.path.join(database,split,mode))
 				
 
-
 		with open(savepath,"w") as f:
 			json.dump(results,f)
 			self.log(f"saved to {savepath}")
@@ -659,216 +500,6 @@ class EvalOpticsBenchmark():
 			print(msg)
 
 
-class ImageNetPathsDataset(torch.utils.data.Dataset):
-	"""
-	ImageNetDataset as a base class , returns images and filepaths
-	"""
-	def __init__(self,dataset,preprocess):
-		self.dataset = dataset
-		self.classes = dataset.classes
-		self.preprocess = preprocess
-		self.index = 0
-
-	def __getitem__(self,index):
-		img,__ = self.dataset[index]
-		fpath,__ = self.dataset.samples[index]
-		self.index = index
-		return self.preprocess(img),fpath
-
-	def __next__(self):
-		self.index += 1
-		return self.__getitem__(self.index)
-
-	def __len__(self):
-		return len(self.dataset)
-
-
-class CreateBenchmark():
-	"""
-
-	This generates for a given "clean data folder" --> ImageNette/val
-		above folder structure
-
-	should be like:
-		images
-			ImageNette
-				/val
-
-	creates:
-		images
-			ImageNette
-				/val
-				/corruptions
-					...
-
-	"""
-	__seed__ = 0
-	__params__ = [3,4,5,6,7,8,9,10]
-	__modes__ = {"defocus_spherical":[3,8],\
-		"astigmatism":[4,5],
-		"coma":[6,7],
-		"trefoil":[9,10]
-		}
-
-	def __init__(self,testdata_path,psfstack_path=None,all_modes=True,\
-			batch_size=50,severities=None,padding_mode="zeros"):
-		"""
-		testdata_path: e.g. ..,ImageNette,val
-		"""
-		print("put all images in a folder data/<dataset_name>/val")
-		self.rootdir,__ = os.path.split(testdata_path)
-		self.isgpu = torch.cuda.is_available()
-		self.device = 'cuda' if self.isgpu else 'cpu'
-		self.psf_stack = self._load_blur_kernel_stack(psfstack_path,device=self.device)
-		cname = "corruptions"
-		corruptions_name = cname+"_rg" if psfstack_path.__contains__("kernel_stack_rg_iccvw.pt") else cname
-		self.paths = {"val":testdata_path,\
-			"corruptions":os.path.join(self.rootdir,corruptions_name)}
-
-		print(f"Loaded: {psfstack_path}")
-
-		self.create_benchmark_paths()
-		self.batch_size = batch_size
-		self.severities = severities if severities is not None else [1,2,3,4,5]
-		self.padding_mode = padding_mode
-
-		self.val_transform = transforms.Compose([
-			transforms.Resize(256),
-			transforms.CenterCrop(224),
-			transforms.ToTensor()#,
-			#transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-			])
-
-		self.save_transform = transforms.ToPILImage()
-		
-		dataset = datasets.ImageFolder(self.paths["val"])
-		self.dataset = ImageNetPathsDataset(dataset,self.val_transform)
-		self.dataloader = torch.utils.data.DataLoader(self.dataset,\
-			shuffle=False,
-			batch_size = self.batch_size,
-			pin_memory=self.isgpu)
-
-
-	@staticmethod
-	def _load_blur_kernel_stack(psfstack_path=None,device='cpu'):
-		"""!
-		# now:  (<param>,<severity>,<chroma>,<color>,<psfy>,<psfx>)
-				if ..ndim==5:
-					kernels.unsqueeze(2).shape: ([8, 5, 1, 3, 25, 25])
-				else: shape: [8,5,nchroma,3,25,25]
-		#.permute(0,1,3,4,2) #,dtype=torch.float32) -- no longer necessary, has the standard shape
-		#  kernels.sum(axis=(-1,-2)) not working, so normalize to l1 this way:
-		#p,s,c,__,__ = kernels.shape
-		"""
-		if psfstack_path is None and __name__ == "__main__":
-			psfstack_path = os.path.abspath(os.path.join(os.getcwd(),"..","kernel_stack_iccvw.pt"))
-		kernels = torch.load(psfstack_path)
-		is_gpu = "cuda" if torch.cuda.is_available() else "cpu"
-		kernels = kernels.to(device)
-		if kernels.ndim == 5:
-			kernels = kernels.unsqueeze(2)  # downward compatibility
-		print(f"loaded kernel stack of shape: {kernels.shape} ({is_gpu}),\n{psfstack_path}")
-		return kernels
-
-
-	def create_benchmark_paths(self):
-
-		for p in self.__modes__:
-			outdir = os.path.join(self.paths['corruptions'],p)
-			if not os.path.exists(outdir):
-				os.makedirs(outdir)
-			self.paths[p] = outdir
-
-		print(f"created folder hierachy in {self.paths['corruptions']}")
-
-
-	def __get__(self):
-		"""
-
-		"""
-		for severity in tqdm(self.severities,total=len(self.severities),\
-				desc="Severity: ",leave=True):
-			for p in tqdm(self.__modes__,desc="Mode: ",leave=False):
-				random.seed(self.__seed__,version=2) # every time the same
-				params = self.__modes__[p]
-				_params = [random.choice(params)-3 for n in range(self.batch_size)]
-				outdir = os.path.join(self.paths[p],str(severity))
-				if not os.path.exists(outdir):
-					os.makedirs(outdir)
-				with torch.no_grad():
-					for i,(images,fpaths) in enumerate(self.dataloader):
-						images = images.to(self.device)
-						images = self.__gen__(images,_params,severity=severity).cpu()
-						self._create_folders(fpaths,outdir)
-						parallel_apply([self._save_image]*len(images),\
-							[(im,fpath,outdir) for im,fpath in zip(images,fpaths)])
-
-
-	def __gen__(self,images,_params,severity=3):
-		_batchsize = images.shape[0]
-		_chroma = 0
-		kernels = self.psf_stack[:, severity-1, _chroma,:]
-		return torch.stack(\
-			parallel_apply([BlurAugment._apply]*len(images),\
-			[(im,kernels[_param,:].unsqueeze(0),self.padding_mode) for im,_param in zip(images,_params)]),\
-			dim=0).squeeze()
-
-
-	def _create_folders(self,fpaths,outdir):
-		for fpath in fpaths:
-			fpath = os.path.normpath(fpath)
-			folder,imname = os.path.split(fpath)
-			__,folder = os.path.split(folder)
-			outpath = os.path.join(outdir,folder)
-			if not os.path.exists(outpath):
-				os.makedirs(outpath)
-
-
-	def _save_image(self,image,fpath,outdir):
-		fpath = os.path.normpath(fpath)
-		folder,imname = os.path.split(fpath)
-		__,folder = os.path.split(folder)
-		savepath = os.path.join(outdir,folder,imname)
-		transforms.ToPILImage()(torch.clip(image,min=0.0,max=1.0)).save(savepath,quality=85)
-
-
-def __test_benchmark__(batch_size=10):
-	"""
-	"""
-	testdata_path = os.path.abspath(os.path.join("..","data","images","ImageNette","val"))
-	benchmark = CreateBenchmark(testdata_path,batch_size=batch_size)
-	benchmark.__get__()
-
-def __test_eval__(ask_dir=True,database=None,**kwargs):
-
-	if not ask_dir:
-		path_to_images_folder = os.path.abspath(os.path.join("..","data","images"))
-		path_to_root_folder = os.path.abspath(os.path.join("..","data"))
-	else:
-		path_to_root_folder = get_dir("Get path to root folder (containing eval,images)")
-		path_to_images_folder = get_dir("Get path to 'images' folder")
-		database = os.path.split(get_dir("Get path to database (top)"))[1]
-
-	evalBench = EvalOpticsBenchmark(path_to_root_folder,path_to_images_folder,
-		batch_size=48,num_workers=8)
-
-	model = evalBench._load_model(kwargs['model']) # https://arxiv.org/abs/1602.07360
-	print(f"loaded model: {model.__name__}")
-	database = 'ImageNette2' if database is None else database
-	split = 'val'
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
-	acc = evalBench.inference_on_folder(model,database,split=split,mode=None,severity=None,\
-		device=device)
-
-	evalBench.report(acc,model,database,split=split,mode=None,severity=None)
-
-
-def get_dir(ttl=""):
-	root = tk.Tk()
-	root.withdraw()
-	return filedialog.askdirectory(title=ttl)
-
-
 def run_on_all(database="imagenet-1k_val",**kwargs):
 	"""!"""
 	import warnings
@@ -878,12 +509,7 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 	batch_size = kwargs['batch_size']
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
-	if kwargs.get("path_to_root_folder",None):
-		path_to_root_folder = kwargs["path_to_root_folder"]
-	else:
-		path_to_root_folder = get_dir("Get path to root folder (containing eval,images)")
-
+	path_to_root_folder = kwargs["path_to_root_folder"]
 	path_to_images_folder = os.path.join(path_to_root_folder,"images")
 	path_to_user_models = os.path.join(path_to_root_folder,"models")
 
@@ -896,7 +522,6 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 	if kwargs.get("models",None) == "__imagenet1k__":
 		assert database=="imagenet-1k_val"
 		path_to_user_models = os.path.join(path_to_user_models,"imagenet1k")
-
 
 	if database=="imagenet-1k_val" and kwargs.get("models","").__contains__("imagenet100"):
 		raise ValueError(\
@@ -931,7 +556,7 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 		model.cuda()
 		evalBench.log(f"currently used (after loading): {utils.get_gpu_memory()[0]}MB")
 
-		splits = ["corruptions"]#['val','corruptions']
+		splits = ["val","corruptions"]#['val','corruptions']
 		#splits = ['corruptions_rg']
 
 		for split in tqdm(splits,leave=False,total=len(splits),desc="split: "):
@@ -972,53 +597,23 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 		gc.collect()
 
 
-def create_benchmark(**kwargs):
-	psfstack_path = os.path.abspath(os.path.join(os.getcwd(),"..","kernel_stack"))
-	if kwargs.get("use_rg_stack",None):
-		psfstack_path += "_rg_iccvw.pt"
-	else:
-		psfstack_path += "_iccvw.pt"		
-		
-	testdata_path = kwargs.get("testdata_path") # the path to image val
-	batch_size = kwargs.get("batch_size",64)
-	benchmark = CreateBenchmark(testdata_path,
-		psfstack_path=psfstack_path,\
-		batch_size=batch_size,\
-		severities=kwargs.get("severities",[1,2,3,4,5]),
-		padding_mode=kwargs.get("padding_mode","zeros"))
-	benchmark.__get__()
-
-
 if __name__ == "__main__":
 	argparser = argparse.ArgumentParser()
-	argparser.add_argument("-t","--testdata_path",default="",type=str)
-	argparser.add_argument("--path_to_root_folder",default="",type=str,\
-		help="path to root for eval, images etc.")
-	argparser.add_argument("-b","--batch_size",default=128,type=int)
-	argparser.add_argument("--padding_mode",default="zeros",type=str)
-	argparser.add_argument("--num_workers",default=6,type=int)
+	
+	argparser.add_argument("--path_to_root_folder",default="",type=str,help="path to root for eval, images etc.")
+
 	argparser.add_argument("-m","--model",default="squeezenet1_0",type=str)
-	argparser.add_argument("--run_all",action="store_true",\
-		help="Select this option to run the benchmark on all available dnns and corruptions")
-	argparser.add_argument("--generate_datasets",action="store_true",default=False,\
-		help="Select this option to generate image datasets (benchmark) for all corruptions")
-	argparser.add_argument("--use_rg_stack",action="store_true",default=False,\
-		help="create the OpticsBenchRG ... magenta red and green only")
-	argparser.add_argument("--severities",default=[1,2,3,4,5],type=int,nargs='+')
+	argparser.add_argument("--models",type=str,default="__all__",help="registered list of models")
+	argparser.add_argument("-b","--batch_size",default=128,type=int)
+	argparser.add_argument("--num_workers",default=6,type=int)
+	
 	argparser.add_argument("--database",type=str,default="imagenet-1k_val")
-	argparser.add_argument("--models",type=str,default="__a__",\
-		help="registered list of models")
+
 	argparser.add_argument("--skip_if_exist",action="store_true",\
 		help="skip if *.json exists -- use only if all models will share same data base before/after")
+
 	kwargs = argparser.parse_args().__dict__
-	#__test_eval__(**kwargs)
 
-	if kwargs['generate_datasets']:
-		assert os.path.exists(kwargs['testdata_path'])
-		create_benchmark(**kwargs)
-
-
-	if kwargs['run_all']:
-		print(f"\n\n{'*'*15} This will run eval on all __models__ & all corruptions {'*'*15}\n\n")
-		run_on_all(**kwargs)
+	print(f"\n\n{'*'*15} This will run eval on all __models__ & all corruptions {'*'*15}\n\n")
+	run_on_all(**kwargs)
 

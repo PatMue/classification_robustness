@@ -12,6 +12,8 @@ example usage:
 
 python3 vis_learning.py -n resnet50_sgd -d imagenet-1k-split --root_dir ~/Documents/omni/download/models/
 
+(or simply use tensorboard...)
+
 """
 #__ROOT_DIR__ = r"S:\Framework_Users\NeuralNetsProjects\models"
 

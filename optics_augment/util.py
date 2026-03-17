@@ -1,15 +1,10 @@
-# 19.02.2023, Patrick Müller 2023
-
-import sys 
 import os 
 import shutil
 from tqdm import tqdm
 import random
-import time
 import argparse
-
-import torch 
-
+import numpy as np
+import matplotlib.pyplot as plt
 
 """
 
@@ -20,11 +15,6 @@ ImageNet-OpticsBlur
 	-- imagenet_optics_augment
 
 """
-
-
-__path_to_benchmark__ = os.path.join(os.path.abspath(\
-	os.path.join(os.getcwd(),"..","..")),"imagenet_optics_benchmark")	
-
 
 def plot_beta_pdf(a,b,n=1000):
     from scipy.stats import beta 
@@ -55,49 +45,7 @@ def plot_dirichlet_pdf(a1=0.8,a2=1.2,a3=1.0,a4=1.0,n=100000):
         input()
         plt.close()
 
-
-def get_baselinestack_from_imagenet_optics_benchmark():
-	# file: defocus_blur_1.PSF.npy	 --> sev 1...5
-	sys.path.insert(1,os.path.join(__path_to_benchmark__,"__generate__"))
-	from create_imagenet_optics import load_json, generate_kernel_stack_augment	
-	studyname = "base"  
-	psfstackpath = os.path.join(__path_to_benchmark__,"current_optics",studyname,\
-			f"{studyname}_psf_stack.pt")
-	if not os.path.exists(psfstackpath):
-		psfstackdir = os.path.split(psfstackpath)[0]
-		kernels = [None]*5
-		for file in os.listdir(psfstackdir): # has dims [severity,idy,idx] (3d)
-			sev = int(os.path.splitext(os.path.splitext(file.split("_")[-1])[0])[0])
-			kernels[sev-1] = torch.from_numpy(np.load(os.path.join(psfstackdir,file)))
-		kernels = torch.dstack(kernels).moveaxis(-1,0) # (1,5,25,25)
-		torch.save(kernels,psfstackpath)
-		print(f"saved 'base' kernels to {psfstackpath}")
-	return psfstackpath
 	
-
-def get_psfstackpath_from_imagenet_optics_benchmark(studyname=None):
-	sys.path.insert(1,os.path.join(__path_to_benchmark__,"__generate__"))
-	from create_imagenet_optics import get_studyname, load_json, generate_kernel_stack_augment
-	if studyname is None:
-		studyname = get_studyname()
-	psfstackpath = os.path.join(__path_to_benchmark__,"current_optics",studyname,\
-			f"{studyname}_psf_stack.pt")
-	if not os.path.exists(psfstackpath):
-		param_values = load_json(os.path.join(__path_to_benchmark__,\
-			"params"),filter_keys=['__chroma_factors__'])
-		generate_kernel_stack_augment(param_values=param_values,\
-			psfdir=os.path.split(psfstackpath),studyname=studyname)
-			
-	return psfstackpath
-
-
-def _get_image_for_plots(torchimage):
-	#http://pytorch.org/vision/main/_modules/torchvision/transforms/functional.html#pil_to_tensor
-	#print(torchimage.shape)
-	return torchimage.squeeze().permute((1,2,0))#torchimage.squeeze().moveaxis(0,-1)
-
-
-
 def create_train_val_split_from_train(path_to_train_folder="",path_to_new_dataset="",\
 		split=0.95,move_to_val=True,tar=False,**kwargs):
 	"""
@@ -149,15 +97,11 @@ def create_train_val_split_from_train(path_to_train_folder="",path_to_new_datase
 			fnames = os.listdir(os.path.join(trainnew,folder))
 			sz = len(fnames) # current folder 
 			sample = random.sample(fnames,int(round(sz*(1-split))))	
-			# now copy all files as selected by the random sampling method: 
 			for file in sample:
 				__,name = os.path.split(file)
 				src = os.path.join(trainnew,folder,name)
 				target = os.path.join(valnew,folder,name)
 				shutil.move(src,target)
-				#print(src)
-				#print(target)
-				#input()
 	
 		print(f"[DONE] Creating train / val split from train with {split*100}%")
 	
@@ -187,7 +131,6 @@ def tar_dataset(path_to_new_dataset=None,tarnow=False,**kwargs):
 				with tarfile.open(tarname,"w") as t:
 					for file in os.listdir(os.path.join(rootdir,folder)):
 						t.add(os.path.join(rootdir,folder,file),recursive=True,arcname=file)
-				#for file in os.listdir(os.path.join(rootdir,folder)):
 	# then tar the whole archives itself, but include only *.tar files:
 	if tarnow:
 		for split in ["train","val"]:
