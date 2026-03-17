@@ -12,13 +12,8 @@ If you find this useful in your research, please cite:
 
 __author__ = "Patrick Müller"
 
-
 # -*- coding: utf-8 -*-
-# based on:
-#retrain_dnn.ipynb
-# Retrain a DNN from pytorch
 # based on: https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
-
 from glob import glob
 import os
 import copy
@@ -383,7 +378,7 @@ if __name__ == "__main__":
     parser.add_argument("-imagefolderpath","--root_dir",default=None,type=str,\
                     help="imagenet dataset path containing two folders: train, val")
     parser.add_argument("--model_dir",default=None,type=str,help="savepath for model checkpoints")
-    
+
     parser.add_argument("--num_workers",default=8,type=int,\
         help="set the number of workers num_worker of the dataloader <= num_cpus (cores)")
     parser.add_argument("--batch_size",default=32,type=int,\

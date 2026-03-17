@@ -465,7 +465,7 @@ class EvalOpticsBenchmark():
 			print(msg)
 
 
-def run_on_all(database="imagenet-1k_val",**kwargs):
+def run_inference(database="imagenet-1k_val",**kwargs):
 	"""!"""
 	import warnings
 	warnings.filterwarnings("ignore")
@@ -565,11 +565,9 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 
 
 if __name__ == "__main__":
-	argparser = argparse.ArgumentParser()
-	
+	argparser = argparse.ArgumentParser()	
 	argparser.add_argument("--path_to_root_folder",default="",type=str,help="path to root for eval, images etc.")
 	argparser.add_argument("--database",type=str,default="imagenet-1k_val")
-
 	argparser.add_argument("--skip_if_exist",action="store_true",\
 		help="skip if *.json exists. use only if all models will share same data base before/after")
 	argparser.add_argument("-m","--model",default="squeezenet1_0",type=str)
@@ -577,10 +575,8 @@ if __name__ == "__main__":
 	argparser.add_argument("-b","--batch_size",default=128,type=int)
 	argparser.add_argument("--num_workers",default=6,type=int)
 	
-
-
 	kwargs = argparser.parse_args().__dict__
 
 	print(f"\n\n{'*'*15} This will run eval on all __models__ & all corruptions {'*'*15}\n\n")
-	run_on_all(**kwargs)
+	run_inference(**kwargs)
 
