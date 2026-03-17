@@ -160,8 +160,6 @@ class VisFeatureMap():
 		return hook	
 
 
-
-	
 def get_disparity_map():
 	"""!
 	

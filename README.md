@@ -6,7 +6,7 @@
 \#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and also provides the code for data augmentation with OpticsAugment.
 If you want to **generate our pre-defined corruptions from OpticsBench use**: 
 ```
-python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_validation_images>
+python generate_datasets.py --testdata_path <path_to_imagenet1k_validation_images>
 ```
 
 #### Why?
@@ -19,7 +19,7 @@ Computer vision using deep neural networks (DNNs) has brought about seminal chan
 #### Code
 
 * `/opticsbench` contains the python code to both create our blur corruption datasets and evaluate pytorch DNNs on this data. User models can be registered in /models
-* `/opticsaugment` contains the python code to train models with OpticsAugment. OpticsAugment itself is defined in `/opticsaugment/__generate__/recipes/_augment.py`.
+* `/opticsaugment` contains the python code to train models with OpticsAugment. OpticsAugment itself is defined in `/opticsaugment/recipes/_augment.py`.
 
 ## Citation
 If you find this useful in your research, please consider citing:
@@ -71,8 +71,8 @@ DNN | 1 | 2 | 3 | 4 | 5
 # How to use the repository:
 
 ## Example usage (OpticsAugment)
-Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/__generate__/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
-First, navigate to: ``` cd /optics_augment/__generate__ ```. Then run the following code snippet to use OpticsAugment training:
+Train a DNN (architecture available in pytorch) using OpticsAugment augmentation. We define basic recipes for different DNNs in `optics_augment/recipes/`. We highly encourage researchers to modify the pre-defined hyperparameters and report results on OpticsBench.
+First, navigate to: ``` cd /optics_augment/ ```. Then run the following code snippet to use OpticsAugment training:
 ```
 python train_dnn.py --root_dir <path_to_dataset> --model_dir $path_to_modeldir --name <model_name> --num_workers <num_workers>
 ```
@@ -86,20 +86,20 @@ Pipelining with AugMix is also possible by adding `--augmix`.
 </br>
 
 ### Dataset generation: *Generate OpticsBench image corruptions*
-First, navigate to: ``` cd /opticsbench/__generate__ ```. Then run the following code snippet **to create all image corruptions**: 
+First, navigate to: ``` cd /opticsbench/ ```. Then run the following code snippet **to create all image corruptions**: 
 ```
 python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_clean_validation_images>
 ```
-The above command calls the function [__generate__/benchmark.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/__generate__/benchmark.py#L985C5-L985C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
+The above command calls the function [generate_datasets.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/generate_datasets.py#L176C1-L192C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
 
 If you have your clean ImageNet dataset in directory ``` /images/val ```, this will put the OpticsBench corruptions in ```/images/corruptions/<corruption_name> ```.
 
 </br> 
 
 ### Inference / Evaluate
-Navigate to ```cd /opticsbench/__generate__``` and then run:
+Navigate to ```cd /opticsbench/``` and then run:
 ```
-python benchmark.py --run_all --path_to_root_folder <root> --models __all__ 
+python inference.py --path_to_root_folder <root> --models __all__ 
 ```
 * The folder hierarchy of the image dataset is mirrored to the eval folder at initialization of the inference / evaluation.
 * Puts result ```.json```files into: ```root/eval/<dataset>/val``` and ```root/eval/<dataset>/corruptions>/<corruption_name>/<severity>/<model_name>.json```
@@ -107,11 +107,11 @@ python benchmark.py --run_all --path_to_root_folder <root> --models __all__
 
 ### Adding user models
 
-Available model lists can be found in `opticsbench/__generate__/__registered_model_lists.py__`. To add user models do the following:
+Available model lists can be found in `opticsbench/__registered_model_lists.py__`. To add user models do the following:
 
 * Put a pytorch checkpoint into `/data/models/*.pt`
-* Then register by adding the name in `opticsbench/__generate__/__registered_model_lists.py`
-* and call e.g. as `python benchmark.py --run_all --path_to_root_folder <root> --models <user_model_list_name> `
+* Then register by adding the name in `opticsbench/__registered_model_lists.py`
+* and call e.g. as `python inference.py --path_to_root_folder <root> --models <user_model_list_name> `
 
 ### Example tree (folder / files hierarchy): 
 
