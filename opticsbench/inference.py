@@ -23,6 +23,7 @@ import json
 import datetime
 import logging
 import gc
+from pathlib import Path
 
 import torch
 import torchvision
@@ -36,19 +37,10 @@ import __registered_model_lists__
 
 logger = logging.getLogger(__name__)
 
-if torchvision.__version__ >= "0.11.0":
-	__models__ = ['alexnet', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnext50_32x4d', 'resnext101_32x8d', 'wide_resnet50_2', 
-			   'wide_resnet101_2', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19_bn', 'vgg19', 'squeezenet1_0', 'squeezenet1_1', 
-			   'inception_v3', 'densenet121', 'densenet169', 'densenet201', 'densenet161', 'mobilenet_v2', 'mobilenet_v3_large', 'mobilenet_v3_small', 
-			   'mnasnet0_5', 'mnasnet0_75', 'mnasnet1_0', 'mnasnet1_3', 'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0', 
-			   'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2', 'efficientnet_b3', 'efficientnet_b4', 'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7',  
-			   'regnet_x_400mf', 'regnet_x_800mf', 'regnet_x_1_6gf', 'regnet_x_3_2gf', 'regnet_x_8gf', 'regnet_x_16gf', 'regnet_x_32gf','regnet_y_800mf', 
-			   'regnet_y_1_6gf', 'regnet_y_3_2gf', 'regnet_y_8gf', 'regnet_y_16gf', 'regnet_y_32gf']
-		
-if torchvision.__version__ >= '0.12.0':
-	# https://pytorch.org/vision/0.12/models.html , https://pytorch.org/vision/0.11/models.html
-	__models__.extend(['vit_b_16','vit_b_32','vit_l_16','vit_l_32',\
-		'convnext_tiny','convnext_small','convnext_base','convnext_large'])
+try:
+	__models__ = torchvision.models.list_models()
+except AttributeError:
+	__models__ = [m for m in dir(models) if not m.startswith("_") and m.islower()]
 
 """
 1. Assign paths
@@ -135,13 +127,17 @@ class EvalOpticsBenchmark():
 		evalBench._report(acc,model,database,mode,severity,split=split)
 		*************************************************************************
 		"""
-		self.paths = {"eval":os.path.join(path_to_root,"eval"),"images":path_to_images_folder,\
-			"models":path_to_user_models,"log":os.path.join(path_to_root,"eval","logfile.log")}
+		self.paths = {
+			"eval":Path(path_to_root) / "eval",
+			"images":Path(path_to_images_folder),\
+			"models":Path(path_to_user_models) if path_to_user_models else None,
+			"log":Path(path_to_root) / "eval" / "logfile.log"
+			}
 		self.isgpu = torch.cuda.is_available()
 		self.batch_size = batch_size
 		self.num_workers = num_workers
 
-		if not os.path.exists(self.paths["eval"]):
+		if not self.paths["eval"].exists():
 			self._mirror_folders()
 
 		if quiet:
@@ -154,20 +150,18 @@ class EvalOpticsBenchmark():
 		self.log(f"models: {self.models}")
 
 
+
 	def _get_logfile(self):
-		"""
-		Run once per class initialization, saved to eval folder top level
-		"""
-		exists = True
+		"""Run once per class initialization, saved to eval folder top level"""
+		self.paths["eval"].mkdir(parents=True, exist_ok=True)
 		i = 0
-		while exists:
-			if os.path.exists(self.paths["log"]):
-				self.paths["log"] = os.path.join(self.paths["eval"],f"logfile_{i}.log")
-				i += 1
-			else:
-				exists = False
-		with open(self.paths['log'],"w") as f:
-			f.write(f"This is the log file for evaloptics on {str(datetime.datetime.now())}")
+		log_path = self.paths["log"]
+		while log_path.exists():
+			log_path = self.paths["eval"] / f"logfile_{i}.log"
+			i += 1
+		self.paths["log"] = log_path
+		with open(self.paths['log'], "w") as f:
+			f.write(f"This is the log file for evaloptics on {datetime.datetime.now()}\n")
 
 
 	def _mirror_folders(self):
@@ -188,52 +182,29 @@ class EvalOpticsBenchmark():
 		print(f"DONE, copying tree to: {self.paths['eval']}")
 
 
-	def _mirror_subfolder(self,subfolder):
-		"""
-		mirror the tree of 'images' (without copying files)
-		"""
-		def ig_f(dir, files):
-			return [f for f in files if os.path.isfile(os.path.join(dir, f)) or f.startswith("n0") or f.startswith("n1")]
-		try:
-			src = os.path.join(self.paths["images"],subfolder)
-			dest = os.path.join(self.paths["eval"],subfolder)
-			shutil.copytree(src,dest,ignore=ig_f)
-			print(f"DONE, copying tree to: {self.paths['eval']}")
-
-		except FileExistsError as err:
-			pass #print(err)
-
-
-
 	def _get_available_datasets(self):
 		"""
 		returns a <dict> containing all available datasets
+		databases[dataset_name][split][mode][severity] = path_to_images
 		"""
-		databases = {d:{"path":os.path.join(self.paths["images"],d),"subsets":{}} \
-			for d in os.listdir(self.paths["images"])}
-
-		for d in databases:
-			fpath = databases[d]["path"]
-			splits = [m for m in os.listdir(fpath) if os.path.isdir(os.path.join(fpath,m))]
-			for split in splits:
-				if split == "corruptions":
-					subsets = {mode:{sev:os.path.join(fpath,split,mode,sev) for sev in os.listdir(\
-						os.path.join(fpath,split,mode)) \
-						if os.path.isdir(os.path.join(fpath,split,mode))} \
-						for mode in os.listdir(os.path.join(fpath,split)) \
-							if os.path.isdir(os.path.join(fpath,split))}
-					#subsets = {s:subsets[s] if len(subsets[s]) else None for s in subsets}
-					databases[d]["subsets"][split] = subsets
-				elif split == "corruptions_rg":
-					subsets = {mode:{sev:os.path.join(fpath,split,mode,sev) for sev in os.listdir(\
-						os.path.join(fpath,split,mode)) \
-						if os.path.isdir(os.path.join(fpath,split,mode))} \
-						for mode in os.listdir(os.path.join(fpath,split)) \
-							if os.path.isdir(os.path.join(fpath,split))}
-					#subsets = {s:subsets[s] if len(subsets[s]) else None for s in subsets}
-					databases[d]["subsets"][split] = subsets
-				elif split == "val":
-					databases[d]["subsets"][split] = os.path.join(fpath,split)
+		databases = {}
+		for db_dir in [d for d in self.paths["images"].iterdir() if d.is_dir()]:
+			db_name = db_dir.name
+			databases[db_name] = {"path": db_dir, "subsets": {}}
+			
+			for split_dir in [s for s in db_dir.iterdir() if s.is_dir()]:
+				split_name = split_dir.name
+				
+				if split_name in ["corruptions", "corruptions_rg"]:
+					databases[db_name]["subsets"][split_name] = {}
+					for mode_dir in [m for m in split_dir.iterdir() if m.is_dir()]:
+						mode_name = mode_dir.name
+						databases[db_name]["subsets"][split_name][mode_name] = {}
+						for sev_dir in [sv for sv in mode_dir.iterdir() if sv.is_dir()]:
+							databases[db_name]["subsets"][split_name][mode_name][sev_dir.name] = sev_dir
+				elif split_name == "val":
+					databases[db_name]["subsets"][split_name] = split_dir
+					
 		return databases
 
 
@@ -253,23 +224,25 @@ class EvalOpticsBenchmark():
 
 
 		if split == "val":
-			return database["subsets"][split]
-		else:
-			self.log(f"split: {split}, {mode}, {sev}")
-			assert mode is not None, f"requires mode - corruption, but is: {mode}"
-			assert sev in [1,2,3,4,5], f"mode requires 'sev', but is: {sev},{type(sev)}"
-			# now it is in the keys
-			try:
-				return database["subsets"][split][mode][str(sev)]
-			except KeyError:
-				return database["subsets"][split][mode][sev]
+			return str(database["subsets"][split])
+
+		self.log(f"split: {split}, {mode}, {sev}")
+		assert mode is not None, f"requires mode - corruption, but is: {mode}"
+		assert sev in [1,2,3,4,5], f"mode requires 'sev', but is: {sev},{type(sev)}"
+		# now it is in the keys
+		try:
+			return str(database["subsets"][split][mode][str(sev)])
+		except KeyError:
+			return str(database["subsets"][split][mode][sev])
 
 
 	def _get_available_user_models(self):
 		"""
 		get list of user trained models (requires torchvision eqivalent description)
 		"""
-
+		if not self.paths["models"] or not self.paths["models"].exists():
+			return {}
+		
 		def get_name_from_savepath(p):
 			# prerequisite: needs to be in torchvision.models listed
 			# find name in __models__
@@ -278,11 +251,13 @@ class EvalOpticsBenchmark():
 				return name[0]
 			raise ValueError(f"Model not found in __models__: {p}")
 
-
-		if os.path.exists(self.paths['models']):
-			return {os.path.splitext(p)[0]:{"path": \
-				os.path.join(self.paths["models"],p), "name":get_name_from_savepath(p)} for p in \
-				os.listdir(self.paths["models"]) if p.endswith('.pt')}
+		if self.paths['models'].exists():
+			user_models = {}
+			for p in self.paths["models"].iterdir():
+				if p.suffix =='.pt':
+					user_models[p.with_suffix('')] = {"path": \
+						os.path.join(self.paths["models"] / p), "name":get_name_from_savepath(str(p))}
+			return user_models
 		return {}
 
 
@@ -299,6 +274,7 @@ class EvalOpticsBenchmark():
 			try to find it in torchvision models
 		"""
 		from collections import OrderedDict
+
 		def rm_substr_from_state_dict(state_dict, substr):
 			# adapted from  https://github.com/RobustBench/robustbench/blob/master/robustbench/utils.py
 			new_state_dict = OrderedDict()
@@ -335,7 +311,7 @@ class EvalOpticsBenchmark():
 
 				return model
 		else:
-			model = models.__dict__.get(usermodel['name'],None)(pretrained=False)
+			model = models.__dict__.get(usermodel['name'],None)(weights=None)
 			if model is None:
 				raise TypeError(f"Model not found: {usermodel['name']}")
 			weights = torch.load(usermodel['path'])['model_state_dict']
@@ -452,11 +428,11 @@ class EvalOpticsBenchmark():
 
 	def get_savepath(self,model,database,split,mode,severity):
 		if split == "val":
-			savedir = os.path.join(self.paths["eval"],database,split)
+			savedir = self.paths["eval"] / database / split
 		else:
-			savedir = os.path.join(self.paths["eval"],database,split,mode,str(severity))
-		savepath = os.path.join(savedir,model.__name__ + ".json")		
-		return savepath,savedir
+			savedir = self.paths["eval"] / database / split / mode / str(severity)
+		savepath = savedir / (model.__name__ + ".json")		
+		return str(savepath), str(savedir)
 
 
 	def report(self,acc,model,database,split=None,mode=None,severity=None):
@@ -473,19 +449,8 @@ class EvalOpticsBenchmark():
 		
 		savepath,savedir = self.get_savepath(model,database,split,mode,severity)
 
-		if not os.path.exists(savedir):
-			top = os.path.join(self.paths["eval"],database)
-			if not os.path.exists(top):
-				self._mirror_subfolder(database)
-			top = os.path.join(top,database,split)
-			if not os.path.exists(top):
-				self._mirror_subfolder(os.path.join(database,split))
-			if split != "val":
-				top = os.path.join(top,database,split,mode)
-				if not os.path.exists(top):
-					self._mirror_subfolder(os.path.join(database,split,mode))
+		Path(savedir).mkdir(parents=True, exist_ok=True)
 				
-
 		with open(savepath,"w") as f:
 			json.dump(results,f)
 			self.log(f"saved to {savepath}")
@@ -591,26 +556,28 @@ def run_on_all(database="imagenet-1k_val",**kwargs):
 						convert_targets=convert_targets)
 					evalBench.report(acc,model,database,split=split,mode=mode,severity=severity)
 					gc.collect()
+
 		model.cpu()
-		utils.free_memory([model])
-		evalBench.log(f"current vram in use (after free): {utils.get_gpu_memory()[0]}MB")
+		del model
 		gc.collect()
+		torch.cuda.empty_cache()
+		evalBench.log(f"current vram in use (after free): {utils.get_gpu_memory()[0]}MB")
 
 
 if __name__ == "__main__":
 	argparser = argparse.ArgumentParser()
 	
 	argparser.add_argument("--path_to_root_folder",default="",type=str,help="path to root for eval, images etc.")
+	argparser.add_argument("--database",type=str,default="imagenet-1k_val")
 
+	argparser.add_argument("--skip_if_exist",action="store_true",\
+		help="skip if *.json exists. use only if all models will share same data base before/after")
 	argparser.add_argument("-m","--model",default="squeezenet1_0",type=str)
 	argparser.add_argument("--models",type=str,default="__all__",help="registered list of models")
 	argparser.add_argument("-b","--batch_size",default=128,type=int)
 	argparser.add_argument("--num_workers",default=6,type=int)
 	
-	argparser.add_argument("--database",type=str,default="imagenet-1k_val")
 
-	argparser.add_argument("--skip_if_exist",action="store_true",\
-		help="skip if *.json exists -- use only if all models will share same data base before/after")
 
 	kwargs = argparser.parse_args().__dict__
 

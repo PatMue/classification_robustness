@@ -117,8 +117,7 @@ class CreateBenchmark():
 
         for p in self.__modes__:
             outdir = os.path.join(self.paths['corruptions'],p)
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
+            os.makedirs(outdir,exist_ok=True)
             self.paths[p] = outdir
 
         print(f"created folder hierachy in {self.paths['corruptions']}")
@@ -133,8 +132,7 @@ class CreateBenchmark():
                 params = self.__modes__[p]
                 _params = [random.choice(params)-3 for n in range(self.batch_size)]
                 outdir = os.path.join(self.paths[p],str(severity))
-                if not os.path.exists(outdir):
-                    os.makedirs(outdir)
+                os.makedirs(outdir,exist_ok=True)
                 with torch.no_grad():
                     for i,(images,fpaths) in enumerate(self.dataloader):
                         images = images.to(self.device)
@@ -157,11 +155,10 @@ class CreateBenchmark():
     def _create_folders(self,fpaths,outdir):
         for fpath in fpaths:
             fpath = os.path.normpath(fpath)
-            folder,imname = os.path.split(fpath)
+            folder,__ = os.path.split(fpath)
             __,folder = os.path.split(folder)
             outpath = os.path.join(outdir,folder)
-            if not os.path.exists(outpath):
-                os.makedirs(outpath)
+            os.makedirs(outpath,exist_ok=True)
 
 
     def _save_image(self,image,fpath,outdir):
