@@ -34,6 +34,21 @@ If you find this useful in your research, please consider citing:
     pages     = {3632-3643}
 }
 ```
+or:
+```
+@article{mullerExaminingImpactOptical2026a,
+  title = {Examining the Impact of Optical Aberrations to Image Classification and Object Detection Models},
+  author = {Müller, Patrick and Braun, Alexander and Keuper, Margret},
+  date = {2026-03},
+  journaltitle = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume = {48},
+  number = {3},
+  pages = {2139--2153},
+  issn = {1939-3539},
+  doi = {10.1109/TPAMI.2025.3622234},
+  url = {https://ieeexplore.ieee.org/document/11205303},
+}
+```
 
 ## Leaderboard (OpticsBench ImageNet-100)
 
