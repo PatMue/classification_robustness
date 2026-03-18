@@ -10,6 +10,7 @@ If you want to **generate our pre-defined corruptions from OpticsBench use**:
 ```
 python generate_datasets.py --testdata_path <path_to_imagenet1k_validation_images>
 ```
+To generate your own lens corruptions, consider using our https://github.com/PatMue/opticsbench_generate, which allows to create lens aberrations. Save your generated psfs in the same data format as the provided psf stack.
 
 #### Why?
 Computer vision using deep neural networks (DNNs) has brought about seminal changes in people's lives. DNNs have to behave in a robust way to disturbances such as noise, pixelation, or blur. Blur directly impacts the performance of DNNs, which are often approximated as a disk-shaped kernel to model defocus. However, optics suggests that there are different kernel shapes depending on wavelength and location caused by optical aberrations. In practice, as the optical quality of a lens decreases, such aberrations increase. 
