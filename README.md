@@ -3,7 +3,7 @@
 
 [ICCV2023 AROW Workshop official code submission. Classification robustness to common optical aberrations](https://openaccess.thecvf.com/content/ICCV2023W/AROW/html/Muller_Classification_Robustness_to_Common_Optical_Aberrations_ICCVW_2023_paper.html)
 
-\#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and also provides the code for data augmentation with OpticsAugment.
+\#tldr: This repository contains the code to reproduce the OpticsBench image corruptions and OpticsAugment data augmentation.
 If you want to **generate our pre-defined corruptions from OpticsBench use**: 
 ```
 python generate_datasets.py --testdata_path <path_to_imagenet1k_validation_images>
