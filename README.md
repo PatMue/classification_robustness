@@ -19,7 +19,7 @@ Computer vision using deep neural networks (DNNs) has brought about seminal chan
 #### Code
 
 * `/opticsbench` contains the python code to both create our blur corruption datasets and evaluate pytorch DNNs on this data. User models can be registered in /models
-* `/opticsaugment` contains the python code to train models with OpticsAugment. OpticsAugment itself is defined in `/opticsaugment/recipes/_augment.py`.
+* `/opticsaugment` contains the python code to train models with OpticsAugment. OpticsAugment itself is defined in `/opticsaugment/_augment.py`.
 
 ## Citation
 If you find this useful in your research, please consider citing:
