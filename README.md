@@ -105,7 +105,7 @@ Pipelining with AugMix is also possible by adding `--augmix`.
 ### Dataset generation: *Generate OpticsBench image corruptions*
 First, navigate to: ``` cd /opticsbench/ ```. Then run the following code snippet **to create all image corruptions**: 
 ```
-python benchmark.py --generate_datasets --database imagenet-1k_val --testdata_path <path_to_clean_validation_images>
+python generate_datasets.py --testdata_path <path_to_clean_validation_images>
 ```
 The above command calls the function [generate_datasets.create_benchmark](https://github.com/PatMue/classification_robustness/blob/main/opticsbench/generate_datasets.py#L176C1-L192C21). This creates a folder hierarchy which is filled with the corrupted <dataset> images: `data/images/<dataset>/<val,corruptions>/<corruption_name>/<severity>/`
 
